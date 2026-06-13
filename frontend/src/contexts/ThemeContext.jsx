@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase, DEMO_SALON_ID } from '@/lib/supabase';
 
 const ThemeContext = createContext(null);
@@ -19,24 +19,25 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  useEffect(() => {
-    loadSalon(DEMO_SALON_ID);
-  }, []);
-
-  const loadSalon = async (salonId) => {
+  const loadSalon = useCallback(async (salonId) => {
     if (!salonId) return;
     const { data } = await supabase.from('salons').select('*').eq('id', salonId).maybeSingle();
     if (data) {
       setSalon(data);
       document.documentElement.style.setProperty('--brand-primary', data.primary_color || '#1A1A1A');
     }
-  };
+  }, []);
 
-  return (
-    <ThemeContext.Provider value={{ salon, isDark, setIsDark, loadSalon }}>
-      {children}
-    </ThemeContext.Provider>
+  useEffect(() => {
+    loadSalon(DEMO_SALON_ID);
+  }, [loadSalon]);
+
+  const value = useMemo(
+    () => ({ salon, isDark, setIsDark, loadSalon }),
+    [salon, isDark, loadSalon]
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = () => useContext(ThemeContext);

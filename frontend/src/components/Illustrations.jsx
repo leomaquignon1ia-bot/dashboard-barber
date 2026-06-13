@@ -11,13 +11,13 @@ export const HairTextureIcon = ({ type, size = 56 }) => {
   );
   if (type === "boucles") return (
     <svg {...common}>{[...Array(12)].map((_,i)=>(
-      <circle key={i} cx={16+(i%4)*11} cy={22+Math.floor(i/4)*10} r="4"/>
+      <circle key={`b-${i}`} cx={16+(i%4)*11} cy={22+Math.floor(i/4)*10} r="4"/>
     ))}</svg>
   );
   // crepus
   return (
     <svg {...common}>{[...Array(20)].map((_,i)=>(
-      <circle key={i} cx={14+(i%5)*9} cy={20+Math.floor(i/5)*8} r="2.5"/>
+      <circle key={`c-${i}`} cx={14+(i%5)*9} cy={20+Math.floor(i/5)*8} r="2.5"/>
     ))}</svg>
   );
 };
@@ -38,8 +38,8 @@ export const CutSilhouette = ({ variant = "classique", texture = "lisses", size 
 
   // Texture overlay on top of head
   const TextureOverlay = () => {
-    if (texture === "boucles") return <>{[...Array(8)].map((_,i)=>(<circle key={i} cx={48+(i%4)*10} cy={32+Math.floor(i/4)*8} r="3"/>))}</>;
-    if (texture === "crepus") return <>{[...Array(14)].map((_,i)=>(<circle key={i} cx={44+(i%5)*8} cy={30+Math.floor(i/5)*7} r="1.8"/>))}</>;
+    if (texture === "boucles") return <>{[...Array(8)].map((_,i)=>(<circle key={`bo-${i}`} cx={48+(i%4)*10} cy={32+Math.floor(i/4)*8} r="3"/>))}</>;
+    if (texture === "crepus") return <>{[...Array(14)].map((_,i)=>(<circle key={`cr-${i}`} cx={44+(i%5)*8} cy={30+Math.floor(i/5)*7} r="1.8"/>))}</>;
     if (texture === "ondules") return <path d="M44 34 Q48 38 44 42 M52 34 Q56 38 52 42 M60 34 Q64 38 60 42 M68 34 Q72 38 68 42 M76 34 Q80 38 76 42"/>;
     return <path d="M44 34 L44 44 M50 33 L50 45 M56 32 L56 46 M62 32 L62 46 M68 33 L68 45 M74 34 L74 44"/>;
   };

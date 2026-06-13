@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Clock, CheckCircle2, AlertTriangle } from "lucide-react";
@@ -7,6 +7,15 @@ export default function ClientWaiting() {
   const { fileId } = useParams();
   const [file, setFile] = useState(null);
   const [position, setPosition] = useState(null);
+
+  const computePosition = useCallback(async (f) => {
+    const q = supabase.from("file_attente").select("id, created_at, coiffeur_id, statut", { count: "exact" })
+      .eq("salon_id", f.salon_id).in("statut", ["en_attente","en_cours"])
+      .lte("created_at", f.created_at);
+    if (f.coiffeur_id) q.eq("coiffeur_id", f.coiffeur_id);
+    const { count } = await q;
+    setPosition(count || 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -22,16 +31,7 @@ export default function ClientWaiting() {
       .on("postgres_changes", { event: "*", schema: "public", table: "file_attente" }, () => load())
       .subscribe();
     return () => { active = false; supabase.removeChannel(channel); };
-  }, [fileId]);
-
-  const computePosition = async (f) => {
-    const q = supabase.from("file_attente").select("id, created_at, coiffeur_id, statut", { count: "exact" })
-      .eq("salon_id", f.salon_id).in("statut", ["en_attente","en_cours"])
-      .lte("created_at", f.created_at);
-    if (f.coiffeur_id) q.eq("coiffeur_id", f.coiffeur_id);
-    const { count } = await q;
-    setPosition(count || 1);
-  };
+  }, [fileId, computePosition]);
 
   if (!file) return <div className="min-h-screen flex items-center justify-center text-sm label-uppercase">Chargement…</div>;
 

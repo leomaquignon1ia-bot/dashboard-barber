@@ -10,8 +10,7 @@ export default function Onboarding() {
     if (profile?.role === "gerant") navigate("/gerant");
     else if (profile?.role === "coiffeur") navigate("/coiffeur");
     else if (profile?.role === "super_admin") navigate("/super-admin");
-  }, [profile, session, navigate]);
-  return (
+  }, [profile, session, navigate]);  return (
     <div className="min-h-screen flex items-center justify-center text-sm label-uppercase">
       Bienvenue — préparation de votre espace…
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,25 +19,7 @@ export default function CoiffeurDashboard() {
   const [tipModal, setTipModal] = useState(null);
   const [customTip, setCustomTip] = useState("");
 
-  useEffect(() => {
-    if (!profile?.salon_id || !profile.prenom) return;
-    loadMe();
-    const channel = supabase.channel("coiffeur-feed")
-      .on("postgres_changes", { event:"*", schema:"public", table:"file_attente" }, () => loadQueue())
-      .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, [profile]);
-
-  const loadMe = async () => {
-    const { data } = await supabase.from("coiffeurs").select("*").eq("salon_id", profile.salon_id).ilike("prenom", profile.prenom).maybeSingle();
-    if (data) { setMe(data); loadQueue(data.id); loadStats(data.id); }
-  };
-  const loadQueue = async (cid) => {
-    const coiffeurId = cid || me?.id; if (!coiffeurId) return;
-    const { data } = await supabase.from("file_attente").select("*").eq("coiffeur_id", coiffeurId).order("created_at");
-    setQueue(data || []);
-  };
-  const loadStats = async (coiffeurId) => {
+  const loadStats = useCallback(async (coiffeurId) => {
     const today = new Date(); today.setHours(0,0,0,0);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const { data: tD } = await supabase.from("file_attente").select("id").eq("coiffeur_id", coiffeurId).eq("statut","termine").gte("termine_at", today.toISOString());
@@ -51,7 +33,27 @@ export default function CoiffeurDashboard() {
       tips_today: (pD||[]).reduce((s,p)=>s+Number(p.montant),0),
       tips_month: (pM||[]).reduce((s,p)=>s+Number(p.montant),0),
     });
-  };
+  }, []);
+
+  const loadQueue = useCallback(async (cid) => {
+    const coiffeurId = cid || me?.id; if (!coiffeurId) return;
+    const { data } = await supabase.from("file_attente").select("*").eq("coiffeur_id", coiffeurId).order("created_at");
+    setQueue(data || []);
+  }, [me?.id]);
+
+  const loadMe = useCallback(async () => {
+    const { data } = await supabase.from("coiffeurs").select("*").eq("salon_id", profile.salon_id).ilike("prenom", profile.prenom).maybeSingle();
+    if (data) { setMe(data); loadQueue(data.id); loadStats(data.id); }
+  }, [profile, loadQueue, loadStats]);
+
+  useEffect(() => {
+    if (!profile?.salon_id || !profile.prenom) return;
+    loadMe();
+    const channel = supabase.channel("coiffeur-feed")
+      .on("postgres_changes", { event:"*", schema:"public", table:"file_attente" }, () => loadQueue())
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [profile, loadMe, loadQueue]);
 
   const toggleDispo = async (v) => {
     const { error } = await supabase.from("coiffeurs").update({ disponible: v }).eq("id", me.id);

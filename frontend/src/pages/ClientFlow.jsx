@@ -9,7 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { HairTextureIcon, CutSilhouette } from "@/components/Illustrations";
-
 const TEXTURES = [
   { id: "lisses", label: "Lisses" },
   { id: "ondules", label: "Ondulés" },
@@ -54,7 +53,7 @@ export default function ClientFlow() {
   const [coiffeurs, setCoiffeurs] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { loadSalon(salonId); }, [salonId]);
+  useEffect(() => { loadSalon(salonId); }, [salonId, loadSalon]);
 
   useEffect(() => {
     supabase.from("coiffeurs").select("*").eq("salon_id", salonId).eq("actif", true).eq("disponible", true)

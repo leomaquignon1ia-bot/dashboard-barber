@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,17 +32,7 @@ export default function GerantDashboard() {
   const [filterCoiffeur, setFilterCoiffeur] = useState("all");
   const [stats, setStats] = useState({ clients: 0, ca: 0, tips: 0, top: "—" });
 
-  useEffect(() => {
-    if (!profile?.salon_id) return;
-    loadAll();
-    const ch = supabase.channel("gerant-feed")
-      .on("postgres_changes", { event:"*", schema:"public", table:"file_attente" }, loadAll)
-      .on("postgres_changes", { event:"*", schema:"public", table:"coiffeurs" }, loadAll)
-      .subscribe();
-    return () => supabase.removeChannel(ch);
-  }, [profile]);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     const sId = profile.salon_id;
     const [{ data: cs }, { data: q }] = await Promise.all([
       supabase.from("coiffeurs").select("*").eq("salon_id", sId).eq("actif", true),
@@ -62,14 +52,27 @@ export default function GerantDashboard() {
     Object.entries(counts).forEach(([id,n])=>{ if(n>topN){topN=n;topId=id;} });
     const top = (cs||[]).find(c=>c.id===topId)?.prenom || "—";
     setStats({ clients: done.length, ca, tips: tipsTotal, top });
-  };
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile?.salon_id) return;
+    loadAll();
+    const ch = supabase.channel("gerant-feed")
+      .on("postgres_changes", { event:"*", schema:"public", table:"file_attente" }, loadAll)
+      .on("postgres_changes", { event:"*", schema:"public", table:"coiffeurs" }, loadAll)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [profile, loadAll]);
 
   const assignCoiffeur = async (fileId, coiffeurId) => {
     await supabase.from("file_attente").update({ coiffeur_id: coiffeurId, peu_importe: false }).eq("id", fileId);
     toast.success("Client assigné");
   };
 
-  const filteredQueue = queue.filter(q => filterCoiffeur === "all" || q.coiffeur_id === filterCoiffeur);
+  const filteredQueue = useMemo(
+    () => queue.filter(q => filterCoiffeur === "all" || q.coiffeur_id === filterCoiffeur),
+    [queue, filterCoiffeur]
+  );
 
   if (!salon) return <div className="min-h-screen flex items-center justify-center label-uppercase">Chargement…</div>;
 
@@ -102,7 +105,7 @@ export default function GerantDashboard() {
         <Tabs defaultValue="chaises">
           <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger data-testid="tab-chaises" value="chaises">Chaises</TabsTrigger>
-            <TabsTrigger data-testid="tab-file" value="file">File d'attente</TabsTrigger>
+            <TabsTrigger data-testid="tab-file" value="file">File d&apos;attente</TabsTrigger>
             <TabsTrigger data-testid="tab-pourboires" value="pourboires">Pourboires</TabsTrigger>
             <TabsTrigger data-testid="tab-params" value="params">Paramètres</TabsTrigger>
           </TabsList>

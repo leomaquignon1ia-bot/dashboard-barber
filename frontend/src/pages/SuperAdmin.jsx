@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,9 +10,7 @@ export default function SuperAdmin() {
   const [salons, setSalons] = useState([]);
   const [stats, setStats] = useState({ totalCA: 0, totalCoiffeurs: 0, totalClients: 0, totalTips: 0, plans: { starter:0, pro:0, studio:0 } });
 
-  useEffect(() => { load(); }, []);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     const today = new Date(); today.setHours(0,0,0,0);
     const [{ data: ss }, { data: cs }, { data: q }, { data: tips }] = await Promise.all([
       supabase.from("salons").select("*"),
@@ -32,7 +30,9 @@ export default function SuperAdmin() {
       plans
     });
     setSalons(ss || []);
-  };
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const setPlan = async (id, plan) => {
     await supabase.from("salons").update({ plan }).eq("id", id);
