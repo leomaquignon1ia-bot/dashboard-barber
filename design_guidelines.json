@@ -1,0 +1,109 @@
+{
+  "project_info": {
+    "name": "Dashboard Barber",
+    "description": "SaaS B2B mobile-first PWA dashboard for barbershops with POS features.",
+    "theme": "Light/Dark adaptive",
+    "archetype": "Archetype 4 (Swiss & High-Contrast)"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "'Inter', sans-serif",
+      "body": "'Inter', sans-serif",
+      "mono": "'JetBrains Mono', monospace"
+    },
+    "rules": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter leading-none",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl font-semibold tracking-tight",
+      "body": "text-base font-normal leading-relaxed text-[#1A1A1A] dark:text-[#F5F5F5]",
+      "labels": "text-xs font-bold uppercase tracking-[0.2em] text-[#9CA3AF]"
+    }
+  },
+  "colors": {
+    "light_mode": {
+      "background": "#FFFFFF",
+      "surface": "#F9FAFB",
+      "text": "#1A1A1A",
+      "border": "#E5E7EB"
+    },
+    "dark_mode": {
+      "background": "#111111",
+      "surface": "#1F2937",
+      "text": "#F5F5F5",
+      "border": "#374151"
+    },
+    "status": {
+      "blue": "#3B82F6",
+      "yellow": "#F59E0B",
+      "red": "#EF4444",
+      "green": "#10B981",
+      "gray": "#9CA3AF"
+    },
+    "primary": {
+      "default": "#1A1A1A",
+      "dark_default": "#F5F5F5",
+      "description": "White label feature: Primary color can be overridden per salon. Defaults to high-contrast black/white."
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Control Room Grid for dashboards, Generous mobile padding for client flows.",
+    "mobile_padding": "p-6",
+    "desktop_padding": "p-8 lg:p-12",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6",
+    "bento_styles": "Use strict grid geometry. Cards should have max 8px border-radius (rounded-lg) with 1px border. No soft shadows. Flat solid surfaces."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:opacity-90 font-semibold rounded-lg px-6 py-3 transition-transform active:scale-95",
+      "status": "Color-coded based on queue state (Blue/Yellow/Red/Green)"
+    },
+    "cards": {
+      "default": "bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-6"
+    },
+    "inputs": {
+      "style": "Shadcn default but with square or mildly rounded corners (rounded-md). High contrast focus ring: focus:ring-2 focus:ring-black dark:focus:ring-white"
+    },
+    "client_flow": {
+      "description": "8-step wizard using mobile-first screens. Use a sticky bottom bar for 'Next/Pay' actions. Big tap targets."
+    },
+    "barber_view": {
+      "description": "Massive toggle for availability. 'Next Client' card taking up 60% of the viewport height. High visual priority."
+    },
+    "manager_dashboard": {
+      "description": "Grid of SVG chairs. The chairs must be colored by status scale (Blue: 1-2, Yellow: 3-5, Red: 6+). Feature gates locked with a padlock icon."
+    }
+  },
+  "motion_and_interactions": {
+    "hover_states": "Crisp opacity changes or subtle 1px border highlights. No muddy shadows.",
+    "transitions": "transition-all duration-200 ease-in-out",
+    "page_loads": "Fade in bottom-up stagger for dashboard widgets using Framer Motion."
+  },
+  "assets_and_media": {
+    "icons": "lucide-react for UI. Custom simple SVGs for hair textures and barber chairs.",
+    "images": [
+      {
+        "category": "barbershop_interior",
+        "url": "https://images.unsplash.com/photo-1759134198561-e2041049419c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBiYXJiZXJzaG9wJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzgxMzYzNjIwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern barbershop interior for landing page or auth background."
+      },
+      {
+        "category": "logo_placeholder",
+        "url": "https://images.unsplash.com/photo-1555274175-75f4056dfd05?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYnJhbmQlMjBsb2dvJTIwYmxhY2slMjB3aGl0ZXxlbnwwfHx8fDE3ODEzNjM2MjV8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Minimalist brand logo placeholder for white-label previews."
+      }
+    ]
+  },
+  "testing": {
+    "data_testid": "MANDATORY on all buttons, links, inputs, and state toggles. Format: kebab-case, role-based. e.g., data-testid='barber-status-toggle'."
+  },
+  "instructions_to_main_agent": [
+    "Install 'lucide-react' for UI icons.",
+    "Use standard HTML/Tailwind for the SVG Barber Chairs. Draw a simple stylized chair path and fill it using the status colors provided (blue, yellow, red, gray).",
+    "Build the Client 8-step flow as a responsive PWA layout with a bottom navigation/action bar.",
+    "For the Manager Dashboard, implement a dense 'Control Room' bento grid.",
+    "Ensure 'Inter' is loaded via Google Fonts or next/font and applied globally in tailwind config.",
+    "Use generic React Context or Zustand for the white-label theme provider so the primary color can be injected via CSS variables.",
+    "All components should be in .js/.jsx, not TypeScript.",
+    "Apply data-testid to every interactive element."
+  ]
+}
