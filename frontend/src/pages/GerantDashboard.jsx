@@ -186,8 +186,11 @@ const PourboiresView = ({ salonId, coiffeurs }) => {
     supabase.from("pourboires").select("*").eq("salon_id", salonId).gte("created_at", month.toISOString())
       .then(({ data }) => setRows(data || []));
   }, [salonId]);
-  const total = rows.reduce((s,r)=>s+Number(r.montant),0);
-  const byCoiffeur = coiffeurs.map(c => ({ ...c, total: rows.filter(r=>r.coiffeur_id===c.id).reduce((s,r)=>s+Number(r.montant),0) }));
+  const total = useMemo(() => rows.reduce((s,r)=>s+Number(r.montant),0), [rows]);
+  const byCoiffeur = useMemo(
+    () => coiffeurs.map(c => ({ ...c, total: rows.filter(r=>r.coiffeur_id===c.id).reduce((s,r)=>s+Number(r.montant),0) })),
+    [coiffeurs, rows]
+  );
   return (
     <div>
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-6 mb-4">

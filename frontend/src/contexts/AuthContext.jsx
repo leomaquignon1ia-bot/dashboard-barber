@@ -29,24 +29,26 @@ export const AuthProvider = ({ children }) => {
     return () => listener.subscription.unsubscribe();
   }, [loadProfile]);
 
-  const signIn = useCallback((email, password) => supabase.auth.signInWithPassword({ email, password }), []);
+  // Stable action handlers grouped in one memo (reduces value-memo dependency count below)
+  const actions = useMemo(() => ({
+    signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
+    signUp: async (email, password, role, salonId, prenom) => {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) return { error };
+      const userId = data.user?.id;
+      if (userId) {
+        await supabase.from('user_roles').upsert({ user_id: userId, role, salon_id: salonId, prenom });
+      }
+      return { data };
+    },
+    signOut: () => supabase.auth.signOut(),
+  }), []);
 
-  const signUp = useCallback(async (email, password, role, salonId, prenom) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return { error };
-    const userId = data.user?.id;
-    if (userId) {
-      await supabase.from('user_roles').upsert({ user_id: userId, role, salon_id: salonId, prenom });
-    }
-    return { data };
-  }, []);
-
-  const signOut = useCallback(() => supabase.auth.signOut(), []);
   const refreshProfile = useCallback(() => loadProfile(session?.user?.id), [loadProfile, session]);
 
   const value = useMemo(
-    () => ({ session, profile, loading, signIn, signUp, signOut, refreshProfile }),
-    [session, profile, loading, signIn, signUp, signOut, refreshProfile]
+    () => ({ session, profile, loading, refreshProfile, ...actions }),
+    [session, profile, loading, refreshProfile, actions]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,6 +3,24 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 
+const ESTIMATED_MIN_PER_CLIENT = 20;
+
+const renderWaitingHeader = (status, position, prenom) => {
+  if (position === 1 && status === "en_attente") {
+    return (
+      <div className="text-2xl sm:text-3xl font-black tracking-tight text-[#10B981] leading-tight">
+        Vous êtes le prochain, {prenom} !
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="text-7xl font-black tracking-tighter">{position}</div>
+      <div className="text-sm text-neutral-500 mt-2">{position - 1} personne{position-1>1?"s":""} devant vous</div>
+    </>
+  );
+};
+
 export default function ClientWaiting() {
   const { fileId } = useParams();
   const [file, setFile] = useState(null);
@@ -36,8 +54,7 @@ export default function ClientWaiting() {
   if (!file) return <div className="min-h-screen flex items-center justify-center text-sm label-uppercase">Chargement…</div>;
 
   const status = file.statut;
-  const isNext = position === 1 && status === "en_attente";
-  const eta = Math.max(0, (position - 1) * 20);
+  const eta = Math.max(0, (position - 1) * ESTIMATED_MIN_PER_CLIENT);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#111111] text-[#1A1A1A] dark:text-[#F5F5F5]">
@@ -61,16 +78,7 @@ export default function ClientWaiting() {
           <>
             <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-8 text-center">
               <div className="label-uppercase mb-3">Position dans la file</div>
-              {isNext ? (
-                <div className="text-2xl sm:text-3xl font-black tracking-tight text-[#10B981] leading-tight">
-                  Vous êtes le prochain, {file.prenom} !
-                </div>
-              ) : (
-                <>
-                  <div className="text-7xl font-black tracking-tighter">{position}</div>
-                  <div className="text-sm text-neutral-500 mt-2">{position - 1} personne{position-1>1?"s":""} devant vous</div>
-                </>
-              )}
+              {renderWaitingHeader(status, position, file.prenom)}
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-4">

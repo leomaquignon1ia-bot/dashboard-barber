@@ -32,6 +32,8 @@ const FINITIONS = [
 ];
 
 const NEEDS_FINITION = ["degrade_bas","degrade_haut","taper"];
+const CUT_ICON_SIZE = 88;
+const ESTIMATED_MIN_PER_CLIENT = 20;
 
 export default function ClientFlow() {
   const { salonId: paramSalonId } = useParams();
@@ -217,7 +219,7 @@ export default function ClientFlow() {
                   {c.id === "decrire" ? (
                     <div className="w-[88px] h-[88px] flex items-center justify-center text-3xl">💬</div>
                   ) : (
-                    <CutSilhouette variant={c.id} texture={texture || "lisses"} size={88}/>
+                    <CutSilhouette variant={c.id} texture={texture || "lisses"} size={CUT_ICON_SIZE}/>
                   )}
                   <span className="text-xs font-semibold text-center leading-tight">{c.label}</span>
                 </button>

@@ -35,6 +35,7 @@ export default function Landing() {
     };
     check();
     return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

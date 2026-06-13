@@ -43,6 +43,11 @@ export default function Login() {
     }
   };
 
+  const submitLabel = (() => {
+    if (loading) return "...";
+    return mode === "signin" ? "Se connecter" : "Créer mon compte";
+  })();
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#111111] text-[#1A1A1A] dark:text-[#F5F5F5]">
       <div className="max-w-md mx-auto px-6 py-10">
@@ -71,7 +76,7 @@ export default function Login() {
             <Input data-testid="login-password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} required minLength={6}/>
           </div>
           <Button data-testid="login-submit" type="submit" disabled={loading} className="w-full bg-black dark:bg-white text-white dark:text-black hover:opacity-90 h-11 font-semibold">
-            {loading ? "..." : mode === "signin" ? "Se connecter" : "Créer mon compte"}
+            {submitLabel}
           </Button>
         </form>
 
