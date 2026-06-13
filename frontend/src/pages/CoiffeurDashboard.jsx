@@ -1,0 +1,209 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { LogOut, CheckCircle2, XCircle, TrendingUp, Coins } from "lucide-react";
+
+export default function CoiffeurDashboard() {
+  const { profile, signOut } = useAuth();
+  const { salon } = useTheme();
+  const navigate = useNavigate();
+  const [me, setMe] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [stats, setStats] = useState({ today: 0, week: 0, month: 0, tips_today: 0, tips_month: 0 });
+  const [tipModal, setTipModal] = useState(null);
+  const [customTip, setCustomTip] = useState("");
+
+  useEffect(() => {
+    if (!profile?.salon_id || !profile.prenom) return;
+    loadMe();
+    const channel = supabase.channel("coiffeur-feed")
+      .on("postgres_changes", { event:"*", schema:"public", table:"file_attente" }, () => loadQueue())
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [profile]);
+
+  const loadMe = async () => {
+    const { data } = await supabase.from("coiffeurs").select("*").eq("salon_id", profile.salon_id).ilike("prenom", profile.prenom).maybeSingle();
+    if (data) { setMe(data); loadQueue(data.id); loadStats(data.id); }
+  };
+  const loadQueue = async (cid) => {
+    const coiffeurId = cid || me?.id; if (!coiffeurId) return;
+    const { data } = await supabase.from("file_attente").select("*").eq("coiffeur_id", coiffeurId).order("created_at");
+    setQueue(data || []);
+  };
+  const loadStats = async (coiffeurId) => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const { data: tD } = await supabase.from("file_attente").select("id").eq("coiffeur_id", coiffeurId).eq("statut","termine").gte("termine_at", today.toISOString());
+    const { data: tM } = await supabase.from("file_attente").select("id").eq("coiffeur_id", coiffeurId).eq("statut","termine").gte("termine_at", monthStart.toISOString());
+    const { data: pD } = await supabase.from("pourboires").select("montant").eq("coiffeur_id", coiffeurId).gte("created_at", today.toISOString());
+    const { data: pM } = await supabase.from("pourboires").select("montant").eq("coiffeur_id", coiffeurId).gte("created_at", monthStart.toISOString());
+    setStats({
+      today: tD?.length || 0,
+      week: tM?.length || 0,
+      month: tM?.length || 0,
+      tips_today: (pD||[]).reduce((s,p)=>s+Number(p.montant),0),
+      tips_month: (pM||[]).reduce((s,p)=>s+Number(p.montant),0),
+    });
+  };
+
+  const toggleDispo = async (v) => {
+    const { error } = await supabase.from("coiffeurs").update({ disponible: v }).eq("id", me.id);
+    if (error) return toast.error("Erreur");
+    setMe({ ...me, disponible: v });
+    toast.success(v ? "Vous êtes disponible" : "Vous êtes hors-ligne");
+  };
+
+  const terminer = async (item) => {
+    await supabase.from("file_attente").update({ statut:"termine", termine_at: new Date().toISOString() }).eq("id", item.id);
+    setTipModal(item);
+    loadStats(me.id);
+  };
+  const absent = async (item) => {
+    await supabase.from("file_attente").update({ statut:"absent" }).eq("id", item.id);
+    toast.message("Client marqué absent");
+  };
+  const validerTip = async (montant) => {
+    if (!tipModal) return;
+    if (montant > 0) {
+      await supabase.from("pourboires").insert({ salon_id: tipModal.salon_id, coiffeur_id: me.id, client_id: tipModal.client_id, montant });
+    }
+    setTipModal(null); setCustomTip("");
+    loadStats(me.id);
+    toast.success(montant>0 ? `Pourboire +${montant}€ enregistré` : "Pourboire passé");
+  };
+
+  const next = queue.find(q => q.statut === "en_attente" || q.statut === "en_cours");
+
+  if (!me) return <div className="min-h-screen flex items-center justify-center label-uppercase">Chargement…</div>;
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-[#111111] text-[#1A1A1A] dark:text-[#F5F5F5] pb-12">
+      <div className="max-w-md mx-auto px-5 py-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center font-bold">{me.prenom[0]}</div>
+            <div>
+              <div className="font-bold tracking-tight">{me.prenom}</div>
+              <div className="text-xs text-neutral-500">{salon?.nom}</div>
+            </div>
+          </div>
+          <button data-testid="signout" onClick={() => { signOut(); navigate("/"); }} className="text-neutral-500 hover:text-current"><LogOut size={18}/></button>
+        </div>
+
+        {/* Dispo toggle */}
+        <div className={`flex items-center justify-between p-5 rounded-lg border ${me.disponible ? "border-[#3B82F6] bg-[#3B82F6]/5" : "border-neutral-200 dark:border-neutral-800"}`}>
+          <div>
+            <div className="label-uppercase">Statut du jour</div>
+            <div className={`text-lg font-bold tracking-tight ${me.disponible?"text-[#3B82F6]":"text-neutral-400"}`}>{me.disponible ? "Disponible" : "Hors-ligne"}</div>
+          </div>
+          <Switch data-testid="dispo-toggle" checked={me.disponible} onCheckedChange={toggleDispo}/>
+        </div>
+
+        {/* Next client */}
+        <div className="mt-6">
+          <div className="label-uppercase mb-2">Prochain client</div>
+          {next ? (
+            <div className="border-2 border-black dark:border-white rounded-lg p-6">
+              <div className="text-3xl font-black tracking-tighter mb-1">{next.prenom}</div>
+              <div className="text-sm text-neutral-500 mb-5">
+                {next.type_coupe} · {next.texture}{next.finition?` · ${next.finition}`:""}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button data-testid="termine-btn" onClick={()=>terminer(next)} className="h-12 bg-[#10B981] hover:bg-[#10B981]/90 text-white font-semibold">
+                  <CheckCircle2 size={16} className="mr-1"/> Terminée
+                </Button>
+                <Button data-testid="absent-btn" onClick={()=>absent(next)} variant="outline" className="h-12 border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/10 font-semibold">
+                  <XCircle size={16} className="mr-1"/> Absent
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-8 text-center text-sm text-neutral-500">
+              Aucun client en attente
+            </div>
+          )}
+        </div>
+
+        {/* Personal queue */}
+        <div className="mt-8">
+          <div className="label-uppercase mb-3">Ma file ({queue.filter(q=>q.statut==="en_attente").length})</div>
+          <div className="space-y-2">
+            {queue.length === 0 && <div className="text-sm text-neutral-500">Aucun client.</div>}
+            {queue.map(q => (
+              <div key={q.id} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3">
+                <div>
+                  <div className="font-semibold text-sm">{q.prenom}</div>
+                  <div className="text-xs text-neutral-500">{q.type_coupe}</div>
+                </div>
+                <StatusPill statut={q.statut}/>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-8">
+          <div className="label-uppercase mb-3">Mes stats</div>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard Icon={TrendingUp} label="Coupes (j)" value={stats.today}/>
+            <StatCard Icon={TrendingUp} label="Coupes (mois)" value={stats.month}/>
+            <StatCard Icon={Coins} label="Tips (j)" value={`${stats.tips_today}€`}/>
+            <StatCard Icon={Coins} label="Tips (mois)" value={`${stats.tips_month}€`}/>
+          </div>
+        </div>
+      </div>
+
+      {/* Tip modal */}
+      <Dialog open={!!tipModal} onOpenChange={(o)=>!o&&setTipModal(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Pourboire</DialogTitle></DialogHeader>
+          <div className="text-sm text-neutral-500 mb-3">Montrer cet écran au client</div>
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            {[2,5,10].map(m => (
+              <button key={m} data-testid={`tip-${m}`} onClick={()=>validerTip(m)} className="p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white font-bold text-lg">
+                {m}€
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 mb-3">
+            <input data-testid="tip-custom-input" type="number" placeholder="Montant libre" value={customTip} onChange={(e)=>setCustomTip(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent text-sm"/>
+            <Button data-testid="tip-custom-ok" onClick={()=>validerTip(Number(customTip)||0)}>OK</Button>
+          </div>
+          <button data-testid="tip-pass" onClick={()=>validerTip(0)} className="w-full text-sm text-neutral-500 hover:text-current py-2">Passer</button>
+          {tipModal && (
+            <div className="mt-3 text-xs text-neutral-500 text-center">
+              Total à saisir au TPE : <span className="font-bold text-base text-current">{Number(tipModal.prix) + (Number(customTip)||0)}€</span>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+const StatusPill = ({ statut }) => {
+  const map = {
+    en_attente: { c: "#3B82F6", l: "En attente" },
+    en_cours: { c: "#F59E0B", l: "En cours" },
+    termine: { c: "#10B981", l: "Terminé" },
+    absent: { c: "#EF4444", l: "Absent" },
+  };
+  const s = map[statut] || map.en_attente;
+  return <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md" style={{ color: s.c, background: s.c+"15" }}>{s.l}</span>;
+};
+
+const StatCard = ({ Icon, label, value }) => (
+  <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4">
+    <div className="flex items-center gap-1.5 label-uppercase mb-1"><Icon size={12}/>{label}</div>
+    <div className="text-2xl font-black tracking-tight">{value}</div>
+  </div>
+);
