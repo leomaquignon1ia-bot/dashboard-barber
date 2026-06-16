@@ -17,6 +17,7 @@ export default function Onboarding() {
   useEffect(() => {
     const t = setTimeout(() => setStuck(true), 5000);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (stuck) {

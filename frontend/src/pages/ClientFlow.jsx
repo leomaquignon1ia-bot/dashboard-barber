@@ -62,6 +62,7 @@ export default function ClientFlow() {
   useEffect(() => {
     supabase.from("coiffeurs").select("*").eq("salon_id", salonId).eq("actif", true).eq("disponible", true)
       .then(({ data }) => setCoiffeurs(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salonId]);
 
   const prix = (() => {

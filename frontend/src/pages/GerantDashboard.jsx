@@ -69,6 +69,8 @@ export default function GerantDashboard() {
     toast.success("Client assigné");
   };
 
+  const availableCoiffeurs = useMemo(() => coiffeurs.filter(c => c.disponible), [coiffeurs]);
+
   const filteredQueue = useMemo(
     () => queue.filter(q => filterCoiffeur === "all" || q.coiffeur_id === filterCoiffeur),
     [queue, filterCoiffeur]
@@ -156,7 +158,7 @@ export default function GerantDashboard() {
                   {q.peu_importe && q.statut === "en_attente" && (
                     <select data-testid={`assign-${q.id}`} onChange={(e)=>assignCoiffeur(q.id, e.target.value)} className="text-xs border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1 bg-transparent">
                       <option value="">Assigner…</option>
-                      {coiffeurs.filter(c=>c.disponible).map(c => <option key={c.id} value={c.id}>{c.prenom}</option>)}
+                      {availableCoiffeurs.map(c => <option key={c.id} value={c.id}>{c.prenom}</option>)}
                     </select>
                   )}
                   <StatusPill statut={q.statut}/>
@@ -199,6 +201,7 @@ const PourboiresView = ({ salonId, coiffeurs }) => {
     const month = new Date(); month.setDate(1); month.setHours(0,0,0,0);
     supabase.from("pourboires").select("*").eq("salon_id", salonId).gte("created_at", month.toISOString())
       .then(({ data }) => setRows(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salonId]);
   const total = useMemo(() => rows.reduce((s,r)=>s+Number(r.montant),0), [rows]);
   const byCoiffeur = useMemo(
