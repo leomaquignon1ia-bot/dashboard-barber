@@ -187,10 +187,13 @@ export default function CoiffeurDashboard() {
             ))}
           </div>
           <div className="flex gap-2 mb-3">
-            <input data-testid="tip-custom-input" type="number" placeholder="Montant libre" value={customTip} onChange={(e)=>setCustomTip(e.target.value)}
+            <input data-testid="tip-custom-input" type="number" min="1" step="1" placeholder="Montant libre (min 1€)" value={customTip} onChange={(e)=>setCustomTip(e.target.value)}
               className="flex-1 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent text-sm"/>
-            <Button data-testid="tip-custom-ok" onClick={()=>validerTip(Number(customTip)||0)}>OK</Button>
+            <Button data-testid="tip-custom-ok" onClick={()=>validerTip(Number(customTip)||0)} disabled={!customTip || Number(customTip) < 1}>OK</Button>
           </div>
+          {customTip && Number(customTip) < 1 && (
+            <div className="text-xs text-[#EF4444] mb-2">Montant minimum : 1€</div>
+          )}
           <button data-testid="tip-pass" onClick={()=>validerTip(0)} className="w-full h-12 rounded-md bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-sm font-semibold">
             Passer / 0€
           </button>

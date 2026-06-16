@@ -45,6 +45,11 @@ export default function ClientFlow() {
 
   const [step, setStep] = useState(1);
   const [accept, setAccept] = useState(false);
+  const [readEnd, setReadEnd] = useState(false);
+  const onConsigneScroll = (e) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) setReadEnd(true);
+  };
   const [prenom, setPrenom] = useState("");
   const [telephone, setTelephone] = useState("");
   const [isAdulte, setIsAdulte] = useState(true);
@@ -141,8 +146,8 @@ export default function ClientFlow() {
       <div className="max-w-md mx-auto px-5 py-6 pb-32">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <button data-testid="back-step" onClick={goBack} disabled={step===1} className="text-sm text-neutral-500 disabled:opacity-30 inline-flex items-center gap-1">
-            <ArrowLeft size={14}/> Retour
+          <button data-testid="back-step" onClick={goBack} disabled={step===1 || step===8 && false} className="text-sm text-neutral-500 disabled:opacity-30 inline-flex items-center gap-1">
+            <ArrowLeft size={14}/> {step === 1 ? "" : "Retour"}
           </button>
           <div className="flex items-center gap-3">
             {salon?.logo_url ? (
@@ -166,12 +171,13 @@ export default function ClientFlow() {
           <div>
             <div className="label-uppercase mb-2">Étape 1 / 8</div>
             <h2 className="text-3xl font-black tracking-tight mb-4">Les consignes</h2>
-            <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 mb-6 whitespace-pre-wrap">
+            <div onScroll={onConsigneScroll} className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 mb-3 whitespace-pre-wrap max-h-64 overflow-y-auto">
               {salon?.consignes || "Bienvenue. Merci de patienter calmement et de respecter votre tour."}
             </div>
-            <label className="flex items-center justify-between gap-3 cursor-pointer border border-neutral-200 dark:border-neutral-800 rounded-lg p-4">
+            {!readEnd && <div className="text-xs text-[#F59E0B] mb-3">↓ Faites défiler jusqu'en bas pour pouvoir accepter</div>}
+            <label className={`flex items-center justify-between gap-3 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 ${readEnd ? "cursor-pointer" : "opacity-50 pointer-events-none"}`}>
               <span className="text-sm font-medium">J'accepte les conditions</span>
-              <Switch data-testid="accept-cgu" checked={accept} onCheckedChange={setAccept}/>
+              <Switch data-testid="accept-cgu" checked={accept} onCheckedChange={setAccept} disabled={!readEnd}/>
             </label>
           </div>
         )}
@@ -320,7 +326,8 @@ export default function ClientFlow() {
           <div className="max-w-md mx-auto">
             {step < 8 ? (
               <Button data-testid="next-step" onClick={advance} disabled={!canNext}
-                className="w-full bg-black dark:bg-white text-white dark:text-black hover:opacity-90 h-12 font-semibold">
+                className="w-full text-white hover:opacity-90 h-12 font-semibold"
+                style={{ background: "linear-gradient(135deg, #6C63FF 0%, #4F46E5 100%)" }}>
                 Continuer <ArrowRight size={16} className="ml-1"/>
               </Button>
             ) : (

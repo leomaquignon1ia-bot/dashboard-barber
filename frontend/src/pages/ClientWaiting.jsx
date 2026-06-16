@@ -3,13 +3,24 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 
-const ESTIMATED_MIN_PER_CLIENT = 20;
+const CUT_LABELS = {
+  degrade_bas: "Dégradé bas",
+  degrade_haut: "Dégradé haut",
+  classique: "Coupe classique",
+  taper: "Taper",
+  locks: "Locks / Tresses / Twist",
+  decrire: "Je décris au coiffeur",
+};
+const TEXTURE_LABELS = { lisses: "Lisses", ondules: "Ondulés", boucles: "Bouclés", crepus: "Crépus" };
+const FINITION_LABELS = { peau: "Peau / Zéro", courte: "Courte", naturelle: "Naturelle" };
+const PAIEMENT_LABELS = { cb: "Carte bancaire", especes: "Espèces", fidelite: "Code fidélité" };
+const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
 
 const renderWaitingHeader = (status, position, prenom) => {
   if (position === 1 && status === "en_attente") {
     return (
       <div className="text-2xl sm:text-3xl font-black tracking-tight text-[#10B981] leading-tight">
-        Vous êtes le prochain, {prenom} !
+        Vous êtes le prochain, {capitalize(prenom)} !
       </div>
     );
   }
@@ -60,7 +71,7 @@ export default function ClientWaiting() {
     <div className="min-h-screen bg-white dark:bg-[#111111] text-[#1A1A1A] dark:text-[#F5F5F5]">
       <div className="max-w-md mx-auto px-5 py-10">
         <div className="label-uppercase mb-2">Votre place</div>
-        <h1 className="text-4xl font-black tracking-tighter mb-8">Bonjour {file.prenom}</h1>
+        <h1 className="text-4xl font-black tracking-tighter mb-8">Bonjour {capitalize(file.prenom)}</h1>
 
         {status === "termine" ? (
           <div className="border border-[#10B981]/30 bg-[#10B981]/5 rounded-lg p-6 text-center">
@@ -90,12 +101,14 @@ export default function ClientWaiting() {
 
         <div className="mt-8 border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 space-y-2 text-sm">
           <div className="label-uppercase mb-2">Votre prestation</div>
-          <div className="flex justify-between"><span className="text-neutral-500">Coupe</span><span className="font-medium">{file.type_coupe}</span></div>
-          {file.finition && <div className="flex justify-between"><span className="text-neutral-500">Finition</span><span className="font-medium">{file.finition}</span></div>}
+          <div className="flex justify-between"><span className="text-neutral-500">Coupe</span><span className="font-medium">{CUT_LABELS[file.type_coupe] || file.type_coupe}</span></div>
+          {file.texture && <div className="flex justify-between"><span className="text-neutral-500">Texture</span><span className="font-medium">{TEXTURE_LABELS[file.texture] || file.texture}</span></div>}
+          {file.finition && <div className="flex justify-between"><span className="text-neutral-500">Finition</span><span className="font-medium">{FINITION_LABELS[file.finition] || file.finition}</span></div>}
+          {file.paiement && <div className="flex justify-between"><span className="text-neutral-500">Paiement</span><span className="font-medium">{PAIEMENT_LABELS[file.paiement] || file.paiement}</span></div>}
           <div className="flex justify-between"><span className="text-neutral-500">Prix</span><span className="font-medium">{file.prix} €</span></div>
         </div>
 
-        <Link to="/" className="block mt-8 text-center text-sm text-neutral-500 hover:text-current">← Accueil</Link>
+        <Link to={`/client/${file.salon_id}`} className="block mt-8 text-center text-sm text-neutral-500 hover:text-current">Nouvelle inscription</Link>
       </div>
     </div>
   );
