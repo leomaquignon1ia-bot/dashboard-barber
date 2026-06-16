@@ -31,6 +31,8 @@ const FINITIONS = [
   { id: "naturelle", label: "Naturelle" },
 ];
 
+const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+
 const NEEDS_FINITION = ["degrade_bas","degrade_haut","taper"];
 const CUT_ICON_SIZE = 88;
 const ESTIMATED_MIN_PER_CLIENT = 20;
@@ -98,8 +100,9 @@ export default function ClientFlow() {
       // Upsert client by phone
       const { data: existing } = await supabase.from("clients").select("*").eq("salon_id", salonId).eq("telephone", telephone).maybeSingle();
       let clientId = existing?.id;
+      const normalizedPrenom = capitalize(prenom.trim());
       if (!clientId) {
-        const { data: created, error } = await supabase.from("clients").insert({ salon_id: salonId, prenom, telephone, is_adulte: isAdulte }).select().single();
+        const { data: created, error } = await supabase.from("clients").insert({ salon_id: salonId, prenom: normalizedPrenom, telephone, is_adulte: isAdulte }).select().single();
         if (error) throw error;
         clientId = created.id;
       }
@@ -110,7 +113,7 @@ export default function ClientFlow() {
         salon_id: salonId,
         coiffeur_id: peuImporte ? null : coiffeurId,
         client_id: clientId,
-        prenom, telephone, is_adulte: isAdulte,
+        prenom: normalizedPrenom, telephone, is_adulte: isAdulte,
         texture, type_coupe: coupe, finition,
         paiement, prix, statut: "en_attente",
         position, peu_importe: peuImporte,
@@ -141,7 +144,11 @@ export default function ClientFlow() {
             <ArrowLeft size={14}/> Retour
           </button>
           <div className="flex items-center gap-3">
-            {salon?.logo_url && <img src={salon.logo_url} alt="" className="w-7 h-7 rounded-md object-cover"/>}
+            {salon?.logo_url ? (
+              <img src={salon.logo_url} alt="" className="w-7 h-7 rounded-md object-cover"/>
+            ) : (
+              <div className="w-7 h-7 rounded-md bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs">✂</div>
+            )}
             <div className="label-uppercase">{salon?.nom || "Salon"}</div>
           </div>
         </div>

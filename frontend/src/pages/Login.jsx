@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase, DEMO_SALON_ID } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [prenom, setPrenom] = useState("");
   const [loading, setLoading] = useState(false);
+  const [coiffeursList, setCoiffeursList] = useState([]);
+
+  useEffect(() => {
+    if (role === "coiffeur") {
+      supabase.from("coiffeurs").select("id, prenom").eq("salon_id", DEMO_SALON_ID).eq("actif", true)
+        .then(({ data }) => setCoiffeursList(data || []));
+    }
+  }, [role]);
 
   const roleLabel = { coiffeur: "Coiffeur", gerant: "Gérant", super_admin: "Super Admin", franchise: "Franchisé" }[role] || "Utilisateur";
   const dest = { coiffeur: "/coiffeur", gerant: "/gerant", super_admin: "/super-admin" }[role] || "/";
@@ -64,7 +73,15 @@ export default function Login() {
           {mode === "signup" && (
             <div className="space-y-2">
               <Label>Prénom</Label>
-              <Input data-testid="signup-prenom" value={prenom} onChange={(e)=>setPrenom(e.target.value)} required />
+              {role === "coiffeur" && coiffeursList.length > 0 ? (
+                <select data-testid="signup-prenom-select" value={prenom} onChange={(e)=>setPrenom(e.target.value)} required
+                  className="w-full h-10 px-3 rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent text-sm">
+                  <option value="">— Choisir —</option>
+                  {coiffeursList.map(c => <option key={c.id} value={c.prenom}>{c.prenom}</option>)}
+                </select>
+              ) : (
+                <Input data-testid="signup-prenom" value={prenom} onChange={(e)=>setPrenom(e.target.value)} required />
+              )}
             </div>
           )}
           <div className="space-y-2">

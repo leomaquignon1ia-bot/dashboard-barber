@@ -21,7 +21,10 @@ const Protected = ({ children, roles }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-sm label-uppercase">Chargement…</div>;
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <Navigate to="/onboarding" replace />;
-  if (roles && !roles.includes(profile.role)) return <Navigate to="/" replace />;
+  if (roles && !roles.includes(profile.role)) {
+    const dest = profile.role === "gerant" ? "/gerant" : profile.role === "coiffeur" ? "/coiffeur" : profile.role === "super_admin" ? "/super-admin" : "/";
+    return <Navigate to={dest} replace />;
+  }
   return children;
 };
 

@@ -21,14 +21,16 @@ export default function CoiffeurDashboard() {
 
   const loadStats = useCallback(async (coiffeurId) => {
     const today = new Date(); today.setHours(0,0,0,0);
+    const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay());
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const { data: tD } = await supabase.from("file_attente").select("id").eq("coiffeur_id", coiffeurId).eq("statut","termine").gte("termine_at", today.toISOString());
+    const { data: tW } = await supabase.from("file_attente").select("id").eq("coiffeur_id", coiffeurId).eq("statut","termine").gte("termine_at", weekStart.toISOString());
     const { data: tM } = await supabase.from("file_attente").select("id").eq("coiffeur_id", coiffeurId).eq("statut","termine").gte("termine_at", monthStart.toISOString());
     const { data: pD } = await supabase.from("pourboires").select("montant").eq("coiffeur_id", coiffeurId).gte("created_at", today.toISOString());
     const { data: pM } = await supabase.from("pourboires").select("montant").eq("coiffeur_id", coiffeurId).gte("created_at", monthStart.toISOString());
     setStats({
       today: tD?.length || 0,
-      week: tM?.length || 0,
+      week: tW?.length || 0,
       month: tM?.length || 0,
       tips_today: (pD||[]).reduce((s,p)=>s+Number(p.montant),0),
       tips_month: (pM||[]).reduce((s,p)=>s+Number(p.montant),0),
@@ -73,12 +75,20 @@ export default function CoiffeurDashboard() {
   };
   const validerTip = async (montant) => {
     if (!tipModal) return;
-    if (montant > 0) {
-      await supabase.from("pourboires").insert({ salon_id: tipModal.salon_id, coiffeur_id: me.id, client_id: tipModal.client_id, montant });
+    const m = Number(montant) || 0;
+    if (m < 0) { toast.error("Montant invalide"); return; }
+    if (m > 0) {
+      const { error } = await supabase.from("pourboires").insert({
+        salon_id: tipModal.salon_id,
+        coiffeur_id: me.id,
+        client_id: tipModal.client_id,
+        montant: m,
+      });
+      if (error) { toast.error(`Erreur: ${error.message}`); return; }
     }
     setTipModal(null); setCustomTip("");
     loadStats(me.id);
-    toast.success(montant>0 ? `Pourboire +${montant}€ enregistré` : "Pourboire passé");
+    toast.success(m>0 ? `Pourboire +${m}€ enregistré` : "Pourboire passé");
   };
 
   const next = queue.find(q => q.statut === "en_attente" || q.statut === "en_cours");
@@ -156,9 +166,10 @@ export default function CoiffeurDashboard() {
           <div className="label-uppercase mb-3">Mes stats</div>
           <div className="grid grid-cols-2 gap-3">
             <StatCard Icon={TrendingUp} label="Coupes (j)" value={stats.today}/>
+            <StatCard Icon={TrendingUp} label="Coupes (sem.)" value={stats.week}/>
             <StatCard Icon={TrendingUp} label="Coupes (mois)" value={stats.month}/>
-            <StatCard Icon={Coins} label="Tips (j)" value={`${stats.tips_today}€`}/>
-            <StatCard Icon={Coins} label="Tips (mois)" value={`${stats.tips_month}€`}/>
+            <StatCard Icon={Coins} label="Pourboires (j)" value={`${stats.tips_today}€`}/>
+            <StatCard Icon={Coins} label="Pourboires (mois)" value={`${stats.tips_month}€`}/>
           </div>
         </div>
       </div>
@@ -180,7 +191,9 @@ export default function CoiffeurDashboard() {
               className="flex-1 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent text-sm"/>
             <Button data-testid="tip-custom-ok" onClick={()=>validerTip(Number(customTip)||0)}>OK</Button>
           </div>
-          <button data-testid="tip-pass" onClick={()=>validerTip(0)} className="w-full text-sm text-neutral-500 hover:text-current py-2">Passer</button>
+          <button data-testid="tip-pass" onClick={()=>validerTip(0)} className="w-full h-12 rounded-md bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-sm font-semibold">
+            Passer / 0€
+          </button>
           {tipModal && (
             <div className="mt-3 text-xs text-neutral-500 text-center">
               Total à saisir au TPE : <span className="font-bold text-base text-current">{Number(tipModal.prix) + (Number(customTip)||0)}€</span>

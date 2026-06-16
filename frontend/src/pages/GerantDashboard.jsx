@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { LogOut, Users, TrendingUp, Coins, Star, Settings } from "lucide-react";
+import { LogOut, Users, TrendingUp, Coins, Star, Settings, Scissors, Plus, X } from "lucide-react";
 import { BarberChair } from "@/components/Illustrations";
 import FeatureLock from "@/components/FeatureLock";
 
@@ -82,7 +82,13 @@ export default function GerantDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            {salon.logo_url && <img src={salon.logo_url} alt="" className="w-10 h-10 rounded-md object-cover"/>}
+            {salon?.logo_url ? (
+              <img src={salon.logo_url} alt="" className="w-10 h-10 rounded-md object-cover"/>
+            ) : (
+              <div className="w-10 h-10 rounded-md bg-black dark:bg-white text-white dark:text-black flex items-center justify-center">
+                <Scissors size={18}/>
+              </div>
+            )}
             <div>
               <div className="label-uppercase">Dashboard</div>
               <div className="text-2xl font-black tracking-tighter">{salon.nom}</div>
@@ -112,11 +118,19 @@ export default function GerantDashboard() {
 
           {/* Chaises */}
           <TabsContent value="chaises">
+            <div className="flex justify-end mb-3">
+              <AjouterCoiffeurBtn salonId={profile.salon_id} onAdded={loadAll}/>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 p-6 border border-neutral-200 dark:border-neutral-800 rounded-lg">
               {coiffeurs.map(c => {
                 const count = queue.filter(q => q.coiffeur_id === c.id && ["en_attente","en_cours"].includes(q.statut)).length;
                 return (
-                  <BarberChair key={c.id} color={chairColor(count, c.disponible)} label={c.prenom} count={count}/>
+                  <div key={c.id} className="flex flex-col items-center gap-1">
+                    <BarberChair color={chairColor(count, c.disponible)} label={c.prenom} count={count}/>
+                    <span className="text-[10px] font-bold uppercase tracking-wider mt-1" style={{ color: c.disponible ? "#3B82F6" : "#EF4444" }}>
+                      {c.disponible ? "Actif" : "Inactif"}
+                    </span>
+                  </div>
                 );
               })}
               {coiffeurs.length === 0 && <div className="col-span-full text-center text-sm text-neutral-500 py-10">Aucun coiffeur actif</div>}
@@ -276,3 +290,30 @@ const Field = ({ label, children }) => (
     {children}
   </div>
 );
+
+const AjouterCoiffeurBtn = ({ salonId, onAdded }) => {
+  const [open, setOpen] = useState(false);
+  const [prenom, setPrenom] = useState("");
+  const [saving, setSaving] = useState(false);
+  const add = async () => {
+    if (!prenom.trim()) return;
+    setSaving(true);
+    const { error } = await supabase.from("coiffeurs").insert({ salon_id: salonId, prenom: prenom.trim(), actif: true, disponible: false });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${prenom} ajouté. Invite-le à créer son compte sur /login?role=coiffeur (prénom: ${prenom.trim()})`);
+    setPrenom(""); setOpen(false); onAdded && onAdded();
+  };
+  if (!open) return (
+    <Button data-testid="add-coiffeur-btn" onClick={() => setOpen(true)} variant="outline" size="sm" className="border-dashed">
+      <Plus size={14} className="mr-1"/> Ajouter un coiffeur
+    </Button>
+  );
+  return (
+    <div className="flex items-center gap-2">
+      <Input data-testid="add-coiffeur-prenom" placeholder="Prénom" value={prenom} onChange={e=>setPrenom(e.target.value)} className="h-9 w-40"/>
+      <Button data-testid="add-coiffeur-save" onClick={add} disabled={saving} size="sm">Créer</Button>
+      <button onClick={() => { setOpen(false); setPrenom(""); }}><X size={16}/></button>
+    </div>
+  );
+};
