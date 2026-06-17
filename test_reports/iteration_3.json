@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 3 BLOCKED — /app/supabase_update.sql has NOT been applied to the Supabase project (https://ustalpdtmlovuioghnyl.supabase.co), despite the user's claim that they executed it. Verified directly via PostgREST REST endpoints AND via the live UI: every column the update.sql adds is still missing. Therefore all 9 re-test items from the request are blocked by the same root cause as iteration_2. The only positive change since iter_2 is that GerantDashboard's AjouterCoiffeurBtn now displays a clean FR toast 'Schéma Supabase incomplet. Exécutez /app/supabase_update.sql dans le SQL Editor.' on failure (good UX improvement by E1). All data-testids referenced in the request are confirmed present in the DOM (param-adresse/ville/cp/tel-fixe/tel-mobile, tarif-adulte-classique, save-params, add-coiffeur-btn). No new code-level regressions detected.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /rest/v1/coiffeurs?select=qr_token", "issue": "42703 column coiffeurs.qr_token does not exist", "priority": "CRITICAL"},
+      {"endpoint": "GET /rest/v1/salons?select=ville,code_postal,telephone_fixe,telephone_mobile", "issue": "42703 column salons.ville does not exist (and the other 3 likewise)", "priority": "CRITICAL"},
+      {"endpoint": "GET /rest/v1/file_attente?select=pourboire", "issue": "42703 column file_attente.pourboire does not exist — note: supabase_update.sql adds columns to pourboires table, not file_attente. If the app actually writes pourboire on file_attente, schema and code disagree.", "priority": "CRITICAL"},
+      {"endpoint": "GET /rest/v1/franchises / /rest/v1/rdv", "issue": "PGRST205 — tables 'franchises' and 'rdv' do not exist in schema cache", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Gérant > Chaises > + Ajouter coiffeur (TestBarber)", "issue": "Insert still fails because coiffeurs.qr_token is missing. UI now correctly shows FR toast 'Schéma Supabase incomplet…' but invite-link is NOT produced. Cannot validate copy-invite.", "affected_selectors": ["[data-testid='add-coiffeur-save']", "[data-testid='invite-link']", "[data-testid='copy-invite']"]},
+      {"flow": "Gérant > Paramètres save", "issue": "Not testable — salons.ville/code_postal/telephone_fixe/telephone_mobile missing → PostgREST update will 400. Fields render empty on load (silent 400).", "affected_selectors": ["[data-testid='save-params']", "[data-testid='param-ville']", "[data-testid='param-cp']", "[data-testid='param-tel-fixe']", "[data-testid='param-tel-mobile']"]},
+      {"flow": "/coiffeur/pointage/{valid-token}", "issue": "Not testable — no qr_token column means no valid token exists for any coiffeur. Invalid-token path was already validated in iter_2.", "affected_selectors": ["[data-testid='pointage-arrive-btn']", "[data-testid='pointage-pause-btn']", "[data-testid='pointage-fin-btn']"]},
+      {"flow": "Coiffeur dashboard (karim@demo.fr) + Pourboire modal", "issue": "Not testable — karim@demo.fr account still not created in Supabase Auth AND file_attente.pourboire column missing. termine-btn → tip modal cannot be validated end-to-end.", "affected_selectors": ["[data-testid='termine-btn']", "[data-testid='tip-custom-input']", "[data-testid='tip-custom-ok']", "[data-testid='tip-pass']", "[data-testid='qr-pointage-btn']", "[data-testid='qr-image']", "[data-testid='qr-link']"]},
+      {"flow": "SuperAdmin (leo@dashboard-barber.fr)", "issue": "Not testable — leo@ account still not created AND salons.ville/telephones missing so the address row in salon-card would render incomplete anyway.", "affected_selectors": ["[data-testid^='plan-']"]},
+      {"flow": "ClientFlow step 8 (Récap) with modified tarif", "issue": "Cannot validate price=22€ because Paramètres save is blocked (salons.ville missing), so the new tarif value never lands in DB."}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_2.json"],
+  "action_items": [
+    "[USER ACTION — BLOCKING] Re-run /app/supabase_update.sql in Supabase SQL Editor on project ustalpdtmlovuioghnyl. Verify post-execution with: SELECT column_name FROM information_schema.columns WHERE table_name IN ('coiffeurs','salons','file_attente') AND column_name IN ('qr_token','ville','code_postal','telephone_fixe','telephone_mobile','pourboire'); SELECT to_regclass('public.franchises'), to_regclass('public.rdv');  All six columns and both tables must be present.",
+    "[USER ACTION] Create karim@demo.fr (demo123) via /login?role=coiffeur signup and leo@dashboard-barber.fr (LeoDemo2026!) via /login?role=super_admin signup. These are still missing in Supabase Auth.",
+    "[E1] CRITICAL schema/code mismatch: supabase_update.sql adds columns to the `pourboires` table (salon_id, coiffeur_id, client_id) but the iter_2 report and request mention `file_attente.pourboire`. Confirm with code in CoiffeurDashboard whether pourboire is written to (a) the `pourboires` row or (b) a `pourboire` column on file_attente. If (b), update supabase_update.sql to also `alter table file_attente add column if not exists pourboire numeric default 0;`. Otherwise iter_3 will hit the same wall."
+  ],
+  "critical_code_review_comments": [
+    "GerantDashboard.AjouterCoiffeurBtn now properly catches the PGRST204/42703 error and displays a clean FR message — good improvement vs iter_2 feedback.",
+    "Potential schema/code mismatch on pourboires vs file_attente.pourboire (see action_items #3). Worth E1 reading CoiffeurDashboard tip-flow to confirm target table.",
+    "All required data-testids are present in the DOM after iter_2 — no regression on selectors. Ready to test once schema lands.",
+    "Note: the supabase_update.sql file itself ends with `notify pgrst, 'reload schema';` which is correct, but if user ran it via the SQL editor without a fresh schema-cache reload, PostgREST might still serve stale columns — though here even the underlying `information_schema` would still expose the columns, so the safer diagnostic is: the SQL was never actually executed against this project."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "0% (4/4 critical schema endpoints still return 42703/PGRST205)", "frontend": "blocked — same 30% of cases as iter_2 remain blocked by DB"},
+  "test_credentials": "gerant@demo.fr/demo123 ✓ confirmed working. karim@demo.fr & leo@dashboard-barber.fr STILL MISSING.",
+  "seed_data_creation": "None — every insert that exercises new columns/tables fails at the schema layer.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Before doing ANYTHING else, run: curl -s 'https://ustalpdtmlovuioghnyl.supabase.co/rest/v1/coiffeurs?select=qr_token&limit=1' -H 'apikey: <REACT_APP_SUPABASE_ANON_KEY>' . If response contains '42703' or 'does not exist', the schema is still not updated — STOP and report back to user immediately (do not re-run the same UI tests, the result is deterministic). Only once that curl returns `[{\"qr_token\":\"<hex>\"}]` proceed with: (a) signup karim@/leo@ via /login pages, (b) Gérant > +Ajouter coiffeur invite-link, (c) Paramètres save & reload-persist, (d) /coiffeur/pointage/{real-token} state machine arrive→pause→fin, (e) termine-btn → tip modal 0.5 vs 5 vs pass, (f) SuperAdmin plan dropdown change → DB verify, (g) ClientFlow récap price=22 after tarif update.",
+  "rca of the issue": "Reproduction: `curl -s 'https://ustalpdtmlovuioghnyl.supabase.co/rest/v1/coiffeurs?select=qr_token,prenom' -H apikey:<anon> -H Authorization:Bearer\\ <anon>` → {\"code\":\"42703\",\"message\":\"column coiffeurs.qr_token does not exist\"}. Same for salons.ville and file_attente.pourboire. Tables `franchises` and `rdv` return PGRST205 (table not in schema cache). The /app/supabase_update.sql file exists, is correct, idempotent, and ends with `notify pgrst, 'reload schema';` — so user-reported execution must have failed silently (wrong project? SQL editor returned an error? wrong file uploaded?). Mitigation: user must paste the entire content of /app/supabase_update.sql into the SQL editor of the ustalpdtmlovuioghnyl project, run it, and verify no error is shown. Then re-trigger frontend retest."
+}
