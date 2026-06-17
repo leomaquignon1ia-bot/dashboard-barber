@@ -12,6 +12,7 @@ export default function Onboarding() {
     if (profile?.role === "gerant") navigate("/gerant");
     else if (profile?.role === "coiffeur") navigate("/coiffeur");
     else if (profile?.role === "super_admin") navigate("/super-admin");
+    else if (profile?.role === "franchise") navigate("/franchise");
   }, [profile, session, navigate]);
 
   useEffect(() => {

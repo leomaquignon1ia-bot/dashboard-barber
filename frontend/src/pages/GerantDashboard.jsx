@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { LogOut, Users, TrendingUp, Coins, Star, Settings, Scissors, Plus, X } from "lucide-react";
-import { BarberChair } from "@/components/Illustrations";
+import { LogOut, Users, TrendingUp, Coins, Star, Settings, Scissors, Plus, X, Copy, QrCode } from "lucide-react";
+import { BarberChair, ScissorsLogo } from "@/components/Illustrations";
 import FeatureLock from "@/components/FeatureLock";
 
 const chairColor = (count, actif) => {
@@ -87,9 +87,7 @@ export default function GerantDashboard() {
             {salon?.logo_url ? (
               <img src={salon.logo_url} alt="" className="w-10 h-10 rounded-md object-cover"/>
             ) : (
-              <div className="w-10 h-10 rounded-md bg-black dark:bg-white text-white dark:text-black flex items-center justify-center">
-                <Scissors size={18}/>
-              </div>
+              <ScissorsLogo size={40}/>
             )}
             <div>
               <div className="label-uppercase">Dashboard</div>
@@ -126,12 +124,16 @@ export default function GerantDashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 p-6 border border-neutral-200 dark:border-neutral-800 rounded-lg">
               {coiffeurs.map(c => {
                 const count = queue.filter(q => q.coiffeur_id === c.id && ["en_attente","en_cours"].includes(q.statut)).length;
+                const pointageStr = c.disponible && c.pointage_at
+                  ? new Date(c.pointage_at).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" })
+                  : null;
                 return (
-                  <div key={c.id} className="flex flex-col items-center gap-1">
+                  <div key={c.id} className="flex flex-col items-center gap-1" data-testid={`chair-${c.id}`}>
                     <BarberChair color={chairColor(count, c.disponible)} label={c.prenom} count={count}/>
                     <span className="text-[10px] font-bold uppercase tracking-wider mt-1" style={{ color: c.disponible ? "#3B82F6" : "#EF4444" }}>
-                      {c.disponible ? "Actif" : "Inactif"}
+                      {c.disponible ? (c.en_pause ? "En pause" : "Actif") : "Inactif"}
                     </span>
+                    {pointageStr && <span className="text-[10px] text-neutral-500">Pointé {pointageStr}</span>}
                   </div>
                 );
               })}
@@ -242,6 +244,12 @@ const ParamsView = ({ salon, onSaved }) => {
       delai_retard_fs: Number(form.delai_retard_fs),
       google_business_url: form.google_business_url,
       locks_actif: form.locks_actif,
+      adresse: form.adresse,
+      ville: form.ville,
+      code_postal: form.code_postal,
+      telephone_fixe: form.telephone_fixe,
+      telephone_mobile: form.telephone_mobile,
+      tarifs: form.tarifs,
     }).eq("id", salon.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -249,21 +257,39 @@ const ParamsView = ({ salon, onSaved }) => {
     onSaved && onSaved();
   };
   const isStarter = salon.plan === "starter";
+  const isProPlus = salon.plan === "pro" || salon.plan === "studio";
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Field label="Horaire ouverture"><Input data-testid="param-ouverture" value={form.horaire_ouverture||""} onChange={e=>setForm({...form, horaire_ouverture:e.target.value})}/></Field>
-        <Field label="Horaire fermeture"><Input data-testid="param-fermeture" value={form.horaire_fermeture||""} onChange={e=>setForm({...form, horaire_fermeture:e.target.value})}/></Field>
-        <Field label="Limite RDV classique"><Input value={form.limite_rdv_classique||""} onChange={e=>setForm({...form, limite_rdv_classique:e.target.value})}/></Field>
-        <Field label="Limite inscription FS"><Input value={form.limite_fs||""} onChange={e=>setForm({...form, limite_fs:e.target.value})}/></Field>
-        <Field label="Délai retard RDV (min)"><Input type="number" value={form.delai_retard_rdv||0} onChange={e=>setForm({...form, delai_retard_rdv:e.target.value})}/></Field>
-        <Field label="Délai retard FS (min)"><Input type="number" value={form.delai_retard_fs||0} onChange={e=>setForm({...form, delai_retard_fs:e.target.value})}/></Field>
+      {/* Coordonnées */}
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
+        <div className="label-uppercase mb-4">Coordonnées du salon</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Field label="Adresse"><Input data-testid="param-adresse" value={form.adresse||""} onChange={e=>setForm({...form, adresse:e.target.value})}/></Field>
+          <Field label="Ville"><Input data-testid="param-ville" value={form.ville||""} onChange={e=>setForm({...form, ville:e.target.value})}/></Field>
+          <Field label="Code postal"><Input data-testid="param-cp" value={form.code_postal||""} onChange={e=>setForm({...form, code_postal:e.target.value})}/></Field>
+          <Field label="Téléphone fixe"><Input data-testid="param-tel-fixe" value={form.telephone_fixe||""} onChange={e=>setForm({...form, telephone_fixe:e.target.value})}/></Field>
+          <Field label="Téléphone mobile"><Input data-testid="param-tel-mobile" value={form.telephone_mobile||""} onChange={e=>setForm({...form, telephone_mobile:e.target.value})}/></Field>
+        </div>
       </div>
+
+      {/* Horaires */}
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
+        <div className="label-uppercase mb-4">Horaires & règles</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Field label="Horaire ouverture"><Input data-testid="param-ouverture" value={form.horaire_ouverture||""} onChange={e=>setForm({...form, horaire_ouverture:e.target.value})}/></Field>
+          <Field label="Horaire fermeture"><Input data-testid="param-fermeture" value={form.horaire_fermeture||""} onChange={e=>setForm({...form, horaire_fermeture:e.target.value})}/></Field>
+          <Field label="Limite RDV classique"><Input value={form.limite_rdv_classique||""} onChange={e=>setForm({...form, limite_rdv_classique:e.target.value})}/></Field>
+          <Field label="Limite inscription FS"><Input value={form.limite_fs||""} onChange={e=>setForm({...form, limite_fs:e.target.value})}/></Field>
+          <Field label="Délai retard RDV (min)"><Input type="number" value={form.delai_retard_rdv||0} onChange={e=>setForm({...form, delai_retard_rdv:e.target.value})}/></Field>
+          <Field label="Délai retard FS (min)"><Input type="number" value={form.delai_retard_fs||0} onChange={e=>setForm({...form, delai_retard_fs:e.target.value})}/></Field>
+        </div>
+      </div>
+
       <Field label="Consignes salon">
         <Textarea data-testid="param-consignes" rows={4} value={form.consignes||""} onChange={e=>setForm({...form, consignes:e.target.value})}/>
       </Field>
       <Field label="Lien Google My Business">
-        <Input value={form.google_business_url||""} onChange={e=>setForm({...form, google_business_url:e.target.value})}/>
+        <Input data-testid="param-google" value={form.google_business_url||""} onChange={e=>setForm({...form, google_business_url:e.target.value})}/>
       </Field>
       <div className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 rounded-lg p-4">
         <div>
@@ -272,6 +298,11 @@ const ParamsView = ({ salon, onSaved }) => {
         </div>
         <Switch data-testid="param-locks" checked={!!form.locks_actif} onCheckedChange={(v)=>setForm({...form, locks_actif:v})}/>
       </div>
+
+      {/* Grille tarifaire (Pro+) */}
+      <FeatureLock locked={isStarter} requiredPlan="pro" featureName="Grille tarifaire détaillée" currentPlan={salon.plan} salonName={salon.nom}>
+        <TarifsGrid value={form.tarifs} onChange={(t) => setForm({ ...form, tarifs: t })} salonLocksActif={!!form.locks_actif} disabled={!isProPlus}/>
+      </FeatureLock>
 
       <FeatureLock locked={isStarter} requiredPlan="pro" featureName="Calendrier RDV avancé" currentPlan={salon.plan} salonName={salon.nom}>
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
@@ -287,6 +318,56 @@ const ParamsView = ({ salon, onSaved }) => {
   );
 };
 
+const TARIF_CUTS = [
+  { id: "degrade_bas", label: "Dégradé bas" },
+  { id: "degrade_haut", label: "Dégradé haut" },
+  { id: "classique", label: "Coupe classique" },
+  { id: "taper", label: "Taper" },
+  { id: "locks", label: "Locks / Tresses / Twist" },
+  { id: "decrire", label: "Je décris au coiffeur" },
+];
+
+const TarifsGrid = ({ value, onChange, salonLocksActif, disabled }) => {
+  const tarifs = value || { adulte: {}, enfant: {} };
+  const upd = (tier, key, v) => {
+    onChange({ ...tarifs, [tier]: { ...tarifs[tier], [key]: Number(v) || 0 } });
+  };
+  return (
+    <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
+      <div className="label-uppercase mb-4">Grille tarifaire (Pro / Studio)</div>
+      <div className="grid grid-cols-3 gap-2 mb-2 text-xs font-semibold text-neutral-500">
+        <div>Prestation</div>
+        <div className="text-center">Adulte</div>
+        <div className="text-center">Enfant</div>
+      </div>
+      <div className="space-y-2">
+        {TARIF_CUTS.filter(c => c.id !== "locks" || salonLocksActif).map(c => (
+          <div key={c.id} className="grid grid-cols-3 gap-2 items-center">
+            <div className="text-sm">{c.label}</div>
+            <Input
+              data-testid={`tarif-adulte-${c.id}`}
+              type="number" min="0" step="1"
+              disabled={disabled}
+              value={tarifs.adulte?.[c.id] ?? ""}
+              onChange={(e) => upd("adulte", c.id, e.target.value)}
+              className="h-9 text-center"
+            />
+            <Input
+              data-testid={`tarif-enfant-${c.id}`}
+              type="number" min="0" step="1"
+              disabled={disabled}
+              value={tarifs.enfant?.[c.id] ?? ""}
+              onChange={(e) => upd("enfant", c.id, e.target.value)}
+              className="h-9 text-center"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 text-xs text-neutral-500">La grille s'affiche automatiquement à l'étape 8 du parcours client.</div>
+    </div>
+  );
+};
+
 const Field = ({ label, children }) => (
   <div className="space-y-1.5">
     <Label className="label-uppercase">{label}</Label>
@@ -298,15 +379,35 @@ const AjouterCoiffeurBtn = ({ salonId, onAdded }) => {
   const [open, setOpen] = useState(false);
   const [prenom, setPrenom] = useState("");
   const [saving, setSaving] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const genToken = () => Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2,"0")).join("");
   const add = async () => {
     if (!prenom.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from("coiffeurs").insert({ salon_id: salonId, prenom: prenom.trim(), actif: true, disponible: false });
+    const qr_token = genToken();
+    const { data, error } = await supabase.from("coiffeurs").insert({
+      salon_id: salonId, prenom: prenom.trim(), actif: true, disponible: false, qr_token
+    }).select().single();
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success(`${prenom} ajouté. Invite-le à créer son compte sur /login?role=coiffeur (prénom: ${prenom.trim()})`);
-    setPrenom(""); setOpen(false); onAdded && onAdded();
+    const link = `${window.location.origin}/login?role=coiffeur&prenom=${encodeURIComponent(prenom.trim())}&token=${data.qr_token}`;
+    setInviteLink(link);
+    toast.success(`${prenom} ajouté. Partagez-lui le lien d'invitation.`);
+    setPrenom(""); onAdded && onAdded();
   };
+  const copyLink = () => { navigator.clipboard.writeText(inviteLink); toast.success("Lien copié"); };
+  if (inviteLink) {
+    return (
+      <div className="flex flex-col gap-2 max-w-md">
+        <div className="text-xs text-neutral-500">Lien d'invitation (à envoyer au coiffeur) :</div>
+        <div className="flex items-center gap-2">
+          <input data-testid="invite-link" readOnly value={inviteLink} className="flex-1 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent text-xs font-mono"/>
+          <Button data-testid="copy-invite" size="sm" onClick={copyLink}><Copy size={14}/></Button>
+          <button data-testid="close-invite" onClick={() => { setInviteLink(""); setOpen(false); }}><X size={16}/></button>
+        </div>
+      </div>
+    );
+  }
   if (!open) return (
     <Button data-testid="add-coiffeur-btn" onClick={() => setOpen(true)} variant="outline" size="sm" className="border-dashed">
       <Plus size={14} className="mr-1"/> Ajouter un coiffeur

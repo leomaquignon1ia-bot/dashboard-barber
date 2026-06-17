@@ -8,15 +8,18 @@ import Login from "@/pages/Login";
 import ClientFlow from "@/pages/ClientFlow";
 import ClientWaiting from "@/pages/ClientWaiting";
 import CoiffeurDashboard from "@/pages/CoiffeurDashboard";
+import CoiffeurPointage from "@/pages/CoiffeurPointage";
 import GerantDashboard from "@/pages/GerantDashboard";
 import SuperAdmin from "@/pages/SuperAdmin";
+import FranchiseDashboard from "@/pages/FranchiseDashboard";
 import Onboarding from "@/pages/Onboarding";
 
 const ROLE_COIFFEUR = ["coiffeur"];
 const ROLE_GERANT = ["gerant"];
 const ROLE_SUPER_ADMIN = ["super_admin"];
+const ROLE_FRANCHISE = ["franchise"];
 
-const ROLE_DEST = { gerant: "/gerant", coiffeur: "/coiffeur", super_admin: "/super-admin" };
+const ROLE_DEST = { gerant: "/gerant", coiffeur: "/coiffeur", super_admin: "/super-admin", franchise: "/franchise" };
 
 const Protected = ({ children, roles }) => {
   const { session, profile, loading } = useAuth();
@@ -42,9 +45,11 @@ function App() {
               <Route path="/client" element={<ClientFlow />} />
               <Route path="/client/:salonId" element={<ClientFlow />} />
               <Route path="/attente/:fileId" element={<ClientWaiting />} />
+              <Route path="/coiffeur/pointage/:token" element={<CoiffeurPointage />} />
               <Route path="/coiffeur" element={<Protected roles={ROLE_COIFFEUR}><CoiffeurDashboard /></Protected>} />
               <Route path="/gerant" element={<Protected roles={ROLE_GERANT}><GerantDashboard /></Protected>} />
               <Route path="/super-admin" element={<Protected roles={ROLE_SUPER_ADMIN}><SuperAdmin /></Protected>} />
+              <Route path="/franchise" element={<Protected roles={ROLE_FRANCHISE}><FranchiseDashboard /></Protected>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <Toaster richColors position="top-center" />

@@ -47,7 +47,7 @@ export default function Landing() {
             <div>
               <div className="font-semibold mb-1">Configuration Supabase requise</div>
               <div className="text-neutral-600 dark:text-neutral-400">
-                Ouvre ton <span className="font-mono">Supabase → SQL Editor</span> et exécute le fichier <span className="font-mono">/app/supabase_schema.sql</span> pour créer les colonnes manquantes, activer les politiques RLS et insérer les données démo.
+                Ouvre ton <span className="font-mono">Supabase → SQL Editor</span> et exécute <span className="font-mono">/app/supabase_schema.sql</span> PUIS <span className="font-mono">/app/supabase_update.sql</span> pour créer les colonnes (adresse, qr_token, tarifs, franchise, rdv…), activer les politiques RLS et rafraîchir le cache PostgREST.
               </div>
             </div>
           </div>
@@ -79,6 +79,7 @@ export default function Landing() {
           />
           <RoleCard to="/login?role=coiffeur" label="Coiffeur" sublabel="Mon interface coiffeur" Icon={Scissors} testid="role-coiffeur" />
           <RoleCard to="/login?role=gerant" label="Gérant" sublabel="Dashboard de mon salon" Icon={Crown} testid="role-gerant" />
+          <RoleCard to="/login?role=franchise" label="Franchisé" sublabel="Vue multi-salons" Icon={Building2} testid="role-franchise" />
           <RoleCard to="/login?role=super_admin" label="Super Admin" sublabel="Vue plateforme (Léo)" Icon={Building2} testid="role-super-admin" />
         </div>
 

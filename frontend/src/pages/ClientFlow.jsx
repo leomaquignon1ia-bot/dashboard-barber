@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { HairTextureIcon, CutSilhouette } from "@/components/Illustrations";
+import { HairTextureIcon, CutSilhouette, ScissorsLogo } from "@/components/Illustrations";
 const TEXTURES = [
   { id: "lisses", label: "Lisses" },
   { id: "ondules", label: "Ondulés" },
@@ -37,6 +37,8 @@ const NEEDS_FINITION = ["degrade_bas","degrade_haut","taper"];
 const CUT_ICON_SIZE = 88;
 const ESTIMATED_MIN_PER_CLIENT = 20;
 
+const PAIEMENT_LABELS = { cb: "Carte bancaire", especes: "Espèces", fidelite: "Code fidélité" };
+
 export default function ClientFlow() {
   const { salonId: paramSalonId } = useParams();
   const salonId = paramSalonId || DEMO_SALON_ID;
@@ -50,6 +52,11 @@ export default function ClientFlow() {
     const el = e.currentTarget;
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) setReadEnd(true);
   };
+  // Si les consignes tiennent déjà dans la zone visible, on autorise direct
+  const onConsigneMount = (el) => {
+    if (!el) return;
+    if (el.scrollHeight <= el.clientHeight + 8) setReadEnd(true);
+  };
   const [prenom, setPrenom] = useState("");
   const [telephone, setTelephone] = useState("");
   const [isAdulte, setIsAdulte] = useState(true);
@@ -60,13 +67,22 @@ export default function ClientFlow() {
   const [peuImporte, setPeuImporte] = useState(false);
   const [paiement, setPaiement] = useState(null);
   const [coiffeurs, setCoiffeurs] = useState([]);
+  const [waitingCounts, setWaitingCounts] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { loadSalon(salonId); }, [salonId, loadSalon]);
 
   useEffect(() => {
-    supabase.from("coiffeurs").select("*").eq("salon_id", salonId).eq("actif", true).eq("disponible", true)
-      .then(({ data }) => setCoiffeurs(data || []));
+    const load = async () => {
+      const { data: cs } = await supabase.from("coiffeurs").select("*").eq("salon_id", salonId).eq("actif", true).eq("disponible", true);
+      setCoiffeurs(cs || []);
+      // compteur d'attente par coiffeur
+      const { data: q } = await supabase.from("file_attente").select("coiffeur_id, statut").eq("salon_id", salonId).in("statut", ["en_attente","en_cours"]);
+      const counts = {};
+      (q||[]).forEach(x => { if (x.coiffeur_id) counts[x.coiffeur_id] = (counts[x.coiffeur_id]||0)+1; });
+      setWaitingCounts(counts);
+    };
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salonId]);
 
@@ -146,14 +162,14 @@ export default function ClientFlow() {
       <div className="max-w-md mx-auto px-5 py-6 pb-32">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <button data-testid="back-step" onClick={goBack} disabled={step===1 || step===8 && false} className="text-sm text-neutral-500 disabled:opacity-30 inline-flex items-center gap-1">
+          <button data-testid="back-step" onClick={goBack} disabled={step===1} className="text-sm text-neutral-500 disabled:opacity-30 inline-flex items-center gap-1">
             <ArrowLeft size={14}/> {step === 1 ? "" : "Retour"}
           </button>
           <div className="flex items-center gap-3">
             {salon?.logo_url ? (
               <img src={salon.logo_url} alt="" className="w-7 h-7 rounded-md object-cover"/>
             ) : (
-              <div className="w-7 h-7 rounded-md bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xs">✂</div>
+              <ScissorsLogo size={28}/>
             )}
             <div className="label-uppercase">{salon?.nom || "Salon"}</div>
           </div>
@@ -171,12 +187,12 @@ export default function ClientFlow() {
           <div>
             <div className="label-uppercase mb-2">Étape 1 / 8</div>
             <h2 className="text-3xl font-black tracking-tight mb-4">Les consignes</h2>
-            <div onScroll={onConsigneScroll} className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 mb-3 whitespace-pre-wrap max-h-64 overflow-y-auto">
+            <div ref={onConsigneMount} onScroll={onConsigneScroll} className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 mb-3 whitespace-pre-wrap max-h-64 overflow-y-auto">
               {salon?.consignes || "Bienvenue. Merci de patienter calmement et de respecter votre tour."}
             </div>
-            {!readEnd && <div className="text-xs text-[#F59E0B] mb-3">↓ Faites défiler jusqu'en bas pour pouvoir accepter</div>}
+            {!readEnd && <div className="text-xs text-[#F59E0B] mb-3" data-testid="scroll-hint">↓ Faites défiler pour lire les consignes</div>}
             <label className={`flex items-center justify-between gap-3 border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 ${readEnd ? "cursor-pointer" : "opacity-50 pointer-events-none"}`}>
-              <span className="text-sm font-medium">J'accepte les conditions</span>
+              <span className="text-sm font-medium">J&apos;accepte les conditions</span>
               <Switch data-testid="accept-cgu" checked={accept} onCheckedChange={setAccept} disabled={!readEnd}/>
             </label>
           </div>
@@ -189,7 +205,7 @@ export default function ClientFlow() {
             <div className="space-y-5">
               <div className="space-y-2">
                 <Label>Prénom</Label>
-                <Input data-testid="client-prenom" value={prenom} onChange={(e)=>setPrenom(e.target.value)} placeholder="Ex: Karim" />
+                <Input data-testid="client-prenom" value={prenom} onChange={(e)=>setPrenom(capitalize(e.target.value))} placeholder="Ex: Karim" />
               </div>
               <div className="space-y-2">
                 <Label>Numéro de téléphone</Label>
@@ -266,9 +282,13 @@ export default function ClientFlow() {
                 <button key={c.id} data-testid={`coiffeur-${c.id}`} onClick={()=>{setCoiffeurId(c.id); setPeuImporte(false);}}
                   className={`w-full p-4 rounded-lg border flex items-center gap-4 ${coiffeurId===c.id && !peuImporte?"border-black dark:border-white bg-black/5 dark:bg-white/5":"border-neutral-200 dark:border-neutral-800"}`}>
                   <div className="w-11 h-11 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center font-semibold">{c.prenom?.[0]}</div>
-                  <div className="text-left">
+                  <div className="text-left flex-1">
                     <div className="font-semibold">{c.prenom}</div>
-                    <div className="text-xs text-neutral-500">Disponible aujourd'hui</div>
+                    <div className="text-xs text-neutral-500">
+                      {waitingCounts[c.id] > 0
+                        ? `${waitingCounts[c.id]} client${waitingCounts[c.id] > 1 ? "s" : ""} en attente`
+                        : "Aucun client en attente"}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -311,7 +331,7 @@ export default function ClientFlow() {
               <Row k="Coupe" v={CUTS.find(c=>c.id===coupe)?.label}/>
               {finition && <Row k="Finition" v={FINITIONS.find(f=>f.id===finition)?.label}/>}
               <Row k="Coiffeur" v={peuImporte?"Peu importe":coiffeurs.find(c=>c.id===coiffeurId)?.prenom}/>
-              <Row k="Paiement" v={paiement}/>
+              <Row k="Paiement" v={PAIEMENT_LABELS[paiement] || paiement}/>
               <div className="border-t border-neutral-200 dark:border-neutral-800 pt-3 mt-3 flex items-center justify-between">
                 <span className="label-uppercase">Total estimé</span>
                 <span className="text-2xl font-black">{paiement==="fidelite" ? "0 €" : `${prix} €`}</span>

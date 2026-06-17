@@ -11,24 +11,35 @@ import { ArrowLeft } from "lucide-react";
 export default function Login() {
   const [params] = useSearchParams();
   const role = params.get("role") || "gerant";
+  const invitePrenom = params.get("prenom");
+  const inviteToken = params.get("token");
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState("signin");
+  const [mode, setMode] = useState(invitePrenom ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [prenom, setPrenom] = useState("");
+  const [prenom, setPrenom] = useState(invitePrenom || "");
   const [loading, setLoading] = useState(false);
   const [coiffeursList, setCoiffeursList] = useState([]);
+  const [inviteSalonId, setInviteSalonId] = useState(null);
 
   useEffect(() => {
+    // Si token coiffeur, on récupère le salon_id depuis le coiffeur correspondant
+    if (role === "coiffeur" && inviteToken) {
+      supabase.from("coiffeurs").select("id, prenom, salon_id").eq("qr_token", inviteToken).maybeSingle()
+        .then(({ data }) => {
+          if (data) { setInviteSalonId(data.salon_id); setPrenom(data.prenom); }
+        });
+      return;
+    }
     if (role === "coiffeur") {
       supabase.from("coiffeurs").select("id, prenom").eq("salon_id", DEMO_SALON_ID).eq("actif", true)
         .then(({ data }) => setCoiffeursList(data || []));
     }
-  }, [role]);
+  }, [role, inviteToken]);
 
   const roleLabel = { coiffeur: "Coiffeur", gerant: "Gérant", super_admin: "Super Admin", franchise: "Franchisé" }[role] || "Utilisateur";
-  const dest = { coiffeur: "/coiffeur", gerant: "/gerant", super_admin: "/super-admin" }[role] || "/";
+  const dest = { coiffeur: "/coiffeur", gerant: "/gerant", super_admin: "/super-admin", franchise: "/franchise" }[role] || "/";
 
   const submit = async (e) => {
     e.preventDefault();
@@ -40,7 +51,12 @@ export default function Login() {
         toast.success("Connexion réussie");
         navigate(dest);
       } else {
-        const { error } = await signUp(email, password, role, role === "super_admin" ? null : "11111111-1111-1111-1111-111111111111", prenom);
+        const salonForUser = (() => {
+          if (role === "super_admin") return null;
+          if (role === "coiffeur" && inviteSalonId) return inviteSalonId;
+          return "11111111-1111-1111-1111-111111111111";
+        })();
+        const { error } = await signUp(email, password, role, salonForUser, prenom);
         if (error) throw error;
         toast.success("Compte créé. Vérifie tes emails si confirmation requise.");
         navigate(dest);
@@ -65,9 +81,15 @@ export default function Login() {
         </Link>
 
         <div className="label-uppercase mb-2">{roleLabel}</div>
-        <h1 className="text-3xl font-black tracking-tight mb-8">
+        <h1 className="text-3xl font-black tracking-tight mb-4">
           {mode === "signin" ? "Connexion" : "Créer un compte"}
         </h1>
+        {invitePrenom && inviteToken && (
+          <div data-testid="invite-banner" className="mb-6 border border-[#6C63FF]/40 bg-[#6C63FF]/5 rounded-lg p-4 text-sm">
+            <div className="font-semibold mb-1">Invitation pour {invitePrenom}</div>
+            <div className="text-neutral-600 dark:text-neutral-400 text-xs">Créez votre compte pour rejoindre le salon. Votre prénom est pré-rempli.</div>
+          </div>
+        )}
 
         <form onSubmit={submit} className="space-y-5">
           {mode === "signup" && (

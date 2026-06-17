@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Building2, Users, TrendingUp, Coins, AlertCircle } from "lucide-react";
+import { LogOut, Building2, Users, TrendingUp, Coins, AlertCircle, Link2 } from "lucide-react";
+import { ScissorsLogo } from "@/components/Illustrations";
 
 export default function SuperAdmin() {
   const { signOut } = useAuth();
@@ -65,22 +66,41 @@ export default function SuperAdmin() {
 
         <div className="label-uppercase mb-3">Tous les salons</div>
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-800">
-          {salons.map(s => (
-            <div key={s.id} className="flex items-center justify-between p-4 gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                {s.logo_url && <img src={s.logo_url} className="w-8 h-8 rounded-md object-cover" alt=""/>}
-                <div className="min-w-0">
-                  <div className="font-semibold truncate">{s.nom}</div>
-                  <div className="text-xs text-neutral-500">{s.id.slice(0,8)}</div>
+          {salons.map(s => {
+            const sameFranchise = s.franchise_id && salons.filter(x => x.franchise_id === s.franchise_id).length > 1;
+            return (
+              <div key={s.id} className="flex items-center justify-between p-4 gap-3" data-testid={`salon-row-${s.id}`}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {s.logo_url
+                    ? <img src={s.logo_url} className="w-10 h-10 rounded-md object-cover" alt=""/>
+                    : <ScissorsLogo size={40}/>}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold truncate">{s.nom}</div>
+                      {sameFranchise && (
+                        <span data-testid={`badge-franchise-${s.id}`} className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md text-white" style={{ background: "linear-gradient(135deg, #6C63FF 0%, #4F46E5 100%)" }}>
+                          <Link2 size={9} className="inline mr-0.5 -mt-0.5"/> Franchise
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-neutral-500 truncate">
+                      {[s.adresse, s.ville].filter(Boolean).join(", ") || "Adresse non renseignée"}
+                    </div>
+                    {(s.telephone_fixe || s.telephone_mobile) && (
+                      <div className="text-xs text-neutral-500 truncate">
+                        {[s.telephone_fixe, s.telephone_mobile].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
+                  </div>
                 </div>
+                <select data-testid={`plan-${s.id}`} value={s.plan || "starter"} onChange={(e)=>setPlan(s.id, e.target.value)} className="text-xs border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1 bg-transparent">
+                  <option value="starter">Starter</option>
+                  <option value="pro">Pro</option>
+                  <option value="studio">Studio</option>
+                </select>
               </div>
-              <select data-testid={`plan-${s.id}`} value={s.plan || "starter"} onChange={(e)=>setPlan(s.id, e.target.value)} className="text-xs border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-1 bg-transparent">
-                <option value="starter">Starter</option>
-                <option value="pro">Pro</option>
-                <option value="studio">Studio</option>
-              </select>
-            </div>
-          ))}
+            );
+          })}
           {salons.length === 0 && <div className="p-8 text-center text-sm text-neutral-500"><AlertCircle className="inline mr-1" size={14}/>Aucun salon enregistré</div>}
         </div>
       </div>

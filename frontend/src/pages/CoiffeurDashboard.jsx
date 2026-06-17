@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { LogOut, CheckCircle2, XCircle, TrendingUp, Coins } from "lucide-react";
+import { LogOut, CheckCircle2, XCircle, TrendingUp, Coins, Pause, Play, QrCode, CalendarClock } from "lucide-react";
 
 export default function CoiffeurDashboard() {
   const { profile, signOut } = useAuth();
@@ -15,9 +15,11 @@ export default function CoiffeurDashboard() {
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
   const [queue, setQueue] = useState([]);
+  const [rdvs, setRdvs] = useState([]);
   const [stats, setStats] = useState({ today: 0, week: 0, month: 0, tips_today: 0, tips_month: 0 });
   const [tipModal, setTipModal] = useState(null);
   const [customTip, setCustomTip] = useState("");
+  const [qrModal, setQrModal] = useState(false);
 
   const loadStats = useCallback(async (coiffeurId) => {
     const today = new Date(); today.setHours(0,0,0,0);
@@ -43,10 +45,20 @@ export default function CoiffeurDashboard() {
     setQueue(data || []);
   }, [me?.id]);
 
+  const loadRdvs = useCallback(async (cid) => {
+    const coiffeurId = cid || me?.id; if (!coiffeurId) return;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+    const { data } = await supabase.from("rdv").select("*").eq("coiffeur_id", coiffeurId)
+      .gte("date_rdv", today.toISOString()).lt("date_rdv", tomorrow.toISOString())
+      .order("date_rdv");
+    setRdvs(data || []);
+  }, [me?.id]);
+
   const loadMe = useCallback(async () => {
     const { data } = await supabase.from("coiffeurs").select("*").eq("salon_id", profile.salon_id).ilike("prenom", profile.prenom).maybeSingle();
-    if (data) { setMe(data); loadQueue(data.id); loadStats(data.id); }
-  }, [profile, loadQueue, loadStats]);
+    if (data) { setMe(data); loadQueue(data.id); loadStats(data.id); loadRdvs(data.id); }
+  }, [profile, loadQueue, loadStats, loadRdvs]);
 
   useEffect(() => {
     if (!profile?.salon_id || !profile.prenom) return;
@@ -58,10 +70,25 @@ export default function CoiffeurDashboard() {
   }, [profile, loadMe, loadQueue]);
 
   const toggleDispo = async (v) => {
-    const { error } = await supabase.from("coiffeurs").update({ disponible: v }).eq("id", me.id);
+    const { error } = await supabase.from("coiffeurs").update({ disponible: v, pointage_at: v ? new Date().toISOString() : me?.pointage_at }).eq("id", me.id);
     if (error) return toast.error("Erreur");
     setMe({ ...me, disponible: v });
     toast.success(v ? "Vous êtes disponible" : "Vous êtes hors-ligne");
+  };
+
+  const togglePause = async () => {
+    const next = !me.en_pause;
+    const { error } = await supabase.from("coiffeurs").update({ en_pause: next, pause_at: new Date().toISOString() }).eq("id", me.id);
+    if (error) return toast.error("Erreur");
+    setMe({ ...me, en_pause: next });
+    toast.success(next ? "Pause activée" : "Reprise du service");
+  };
+
+  const finirJournee = async () => {
+    const { error } = await supabase.from("coiffeurs").update({ disponible: false, en_pause: false, fin_journee_at: new Date().toISOString() }).eq("id", me.id);
+    if (error) return toast.error("Erreur");
+    setMe({ ...me, disponible: false, en_pause: false });
+    toast.success("Fin de journée enregistrée");
   };
 
   const terminer = async (item) => {
@@ -107,16 +134,36 @@ export default function CoiffeurDashboard() {
               <div className="text-xs text-neutral-500">{salon?.nom}</div>
             </div>
           </div>
-          <button data-testid="signout" onClick={() => { signOut(); navigate("/"); }} className="text-neutral-500 hover:text-current"><LogOut size={18}/></button>
+          <div className="flex items-center gap-3">
+            <button data-testid="qr-pointage-btn" onClick={() => setQrModal(true)} className="text-neutral-500 hover:text-current" title="Mon QR pointage"><QrCode size={18}/></button>
+            <button data-testid="signout" onClick={() => { signOut(); navigate("/"); }} className="text-neutral-500 hover:text-current"><LogOut size={18}/></button>
+          </div>
         </div>
 
-        {/* Dispo toggle */}
-        <div className={`flex items-center justify-between p-5 rounded-lg border ${me.disponible ? "border-[#3B82F6] bg-[#3B82F6]/5" : "border-neutral-200 dark:border-neutral-800"}`}>
-          <div>
-            <div className="label-uppercase">Statut du jour</div>
-            <div className={`text-lg font-bold tracking-tight ${me.disponible?"text-[#3B82F6]":"text-neutral-400"}`}>{me.disponible ? "Disponible" : "Hors-ligne"}</div>
+        {/* Dispo + Pause + Fin journée */}
+        <div className={`p-5 rounded-lg border ${me.disponible ? (me.en_pause ? "border-[#F59E0B] bg-[#F59E0B]/5" : "border-[#3B82F6] bg-[#3B82F6]/5") : "border-neutral-200 dark:border-neutral-800"}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="label-uppercase">Statut du jour</div>
+              <div className={`text-lg font-bold tracking-tight ${me.disponible ? (me.en_pause ? "text-[#F59E0B]" : "text-[#3B82F6]") : "text-neutral-400"}`}>
+                {me.disponible ? (me.en_pause ? "En pause" : "Disponible") : "Hors-ligne"}
+              </div>
+              {me.pointage_at && me.disponible && (
+                <div className="text-xs text-neutral-500 mt-0.5">Pointé à {new Date(me.pointage_at).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" })}</div>
+              )}
+            </div>
+            <Switch data-testid="dispo-toggle" checked={me.disponible} onCheckedChange={toggleDispo}/>
           </div>
-          <Switch data-testid="dispo-toggle" checked={me.disponible} onCheckedChange={toggleDispo}/>
+          {me.disponible && (
+            <div className="grid grid-cols-2 gap-3">
+              <Button data-testid="pause-btn" variant="outline" onClick={togglePause} className="h-10 font-semibold">
+                {me.en_pause ? <><Play size={14} className="mr-1"/>Reprendre</> : <><Pause size={14} className="mr-1"/>Pause</>}
+              </Button>
+              <Button data-testid="fin-journee-btn" variant="outline" onClick={finirJournee} className="h-10 border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/10 font-semibold">
+                <LogOut size={14} className="mr-1"/> Fin journée
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Next client */}
@@ -159,6 +206,26 @@ export default function CoiffeurDashboard() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* RDV du jour */}
+        <div className="mt-8">
+          <div className="label-uppercase mb-3 flex items-center gap-1.5"><CalendarClock size={12}/> RDV du jour ({rdvs.length})</div>
+          {rdvs.length === 0 ? (
+            <div className="text-sm text-neutral-500 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-4 text-center">Aucun rendez-vous planifié aujourd&apos;hui.</div>
+          ) : (
+            <div className="space-y-2">
+              {rdvs.map(r => (
+                <div key={r.id} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3">
+                  <div>
+                    <div className="font-semibold text-sm">{r.prenom}</div>
+                    <div className="text-xs text-neutral-500">{r.type_coupe || "Coupe"}</div>
+                  </div>
+                  <div className="text-sm font-bold tabular-nums">{new Date(r.date_rdv).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" })}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Stats */}
@@ -204,6 +271,31 @@ export default function CoiffeurDashboard() {
           )}
         </DialogContent>
       </Dialog>
+      {/* QR Pointage modal */}
+      <Dialog open={qrModal} onOpenChange={setQrModal}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Mon QR de pointage</DialogTitle></DialogHeader>
+          <div className="text-sm text-neutral-500 mb-3">Scannez ce QR avec votre téléphone pour pointer l&apos;arrivée, prendre une pause ou terminer la journée.</div>
+          {me.qr_token ? (
+            <div className="flex flex-col items-center gap-3 py-2">
+              <img
+                data-testid="qr-image"
+                alt="QR Pointage"
+                width={220}
+                height={220}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + "/coiffeur/pointage/" + me.qr_token)}`}
+                className="rounded-md border border-neutral-200 dark:border-neutral-800 bg-white"
+              />
+              <div className="text-xs text-neutral-500 break-all text-center" data-testid="qr-link">
+                {window.location.origin}/coiffeur/pointage/{me.qr_token}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-[#EF4444]">QR token non généré. Demande au gérant de régénérer.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

@@ -1,0 +1,61 @@
+{
+  "summary": "Frontend-only test pass (iteration 2) AFTER supabase_schema.sql initial seed was applied but BEFORE supabase_update.sql. Confirmed: all 5 smoke pages load, Landing shows 4 role cards + Client, Continuer btn uses correct gradient #6C63FF→#4F46E5, ClientFlow header has no link to '/' (only Retour), ClientWaiting 'Nouvelle inscription' link confirmed in source to point to /client/${file.salon_id}, ScissorsLogo placeholder renders when no logo_url, step1 toggle accept-cgu gates next-step correctly, step2 prenom auto-capitalises ('karim'→'Karim'), step6 shows coiffeurs with subtext ('2 clients en attente' / 'Aucun client en attente') and Peu importe testid, invalid pointage shows 'Lien invalide'. Gérant login (gerant@demo.fr) succeeds; /gerant renders 4 KPIs + 4 tabs + Paramètres has all expected testids (param-adresse, param-ville, param-cp, param-tel-fixe, param-tel-mobile, tarif-adulte/enfant-*) and Chaises Ajouter coiffeur modal works UI-side. BLOCKED by missing Supabase columns: coiffeurs.qr_token (blocks invite-link generation and /coiffeur/pointage/{token} valid case), salons.ville/adresse/code_postal/telephones/tarifs (Paramètres reads return 400 silently), file_attente.pourboire. BLOCKED accounts: leo@dashboard-barber.fr and karim@demo.fr not yet created in Supabase Auth → SuperAdmin dashboard + Coiffeur pourboire modal NOT testable.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Gerant > Chaises > Ajouter un coiffeur",
+        "issue": "Insert fails with toast 'Could not find the qr_token column of coiffeurs in the schema cache' (PGRST204). No invite link is produced. Expected per user note — will be resolved once /app/supabase_update.sql is executed in Supabase SQL Editor.",
+        "affected_selectors": ["[data-testid='add-coiffeur-save']", "[data-testid='invite-link']"]
+      },
+      {
+        "flow": "Gerant > Paramètres (load)",
+        "issue": "GET /salons select includes ville/adresse/code_postal/telephone_*/tarifs which return 400 (column does not exist). Form renders empty silently; would-be save will likely also 400. Same root cause: supabase_update.sql not yet applied.",
+        "affected_selectors": ["[data-testid='param-adresse']", "[data-testid='param-ville']", "[data-testid='tarif-adulte-classique']"]
+      },
+      {
+        "flow": "/coiffeur/pointage/{token-valide}",
+        "issue": "Not testable — coiffeurs.qr_token column missing in DB, no valid token can be generated. UI invalid-token path (Lien invalide) works correctly.",
+        "affected_selectors": ["[data-testid='pointage-arrive-btn']"]
+      },
+      {
+        "flow": "Super Admin login + Coiffeur pourboire modal",
+        "issue": "Accounts leo@dashboard-barber.fr and karim@demo.fr return 'Invalid login credentials' — they have not been created via signup in Supabase Auth. Tests for SuperAdmin salon list / plan dropdown / placeholder logo and for Pourboire modal (tip-custom-input/ok/pass + termine-btn) could NOT be executed.",
+        "affected_selectors": ["[data-testid='termine-btn']", "[data-testid='tip-custom-input']", "[data-testid='tip-custom-ok']", "[data-testid='tip-pass']", "[data-testid^='plan-']"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "ClientFlow step 6",
+        "issues": ["Sous-texte affiche 'Aucun client en attente' au lieu de '0 client en attente' (mineur, plus idiomatique en FR mais diffère de la spec)."]
+      },
+      {
+        "screen": "Gérant > Paramètres",
+        "issues": ["Le titre 'Grille tarifaire' n'apparaît pas dans le DOM — la section des tarifs existe (testids présents) mais aucun heading ne l'identifie. Suggestion: ajouter un <h3>Grille tarifaire</h3> au-dessus de la grille pour clarté UX."]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "[USER ACTION] Exécuter /app/supabase_update.sql dans Supabase SQL Editor pour ajouter colonnes qr_token, adresse, ville, code_postal, telephone_fixe, telephone_mobile, tarifs (salons), pourboire (file_attente), table franchises, etc.",
+    "[USER ACTION] Créer les comptes leo@dashboard-barber.fr (LeoDemo2026!) et karim@demo.fr (demo123) via /login?role=super_admin et /login?role=coiffeur — mode 'Créer un compte'. Sans ces comptes, SuperAdmin et Pourboire ne sont pas testables.",
+    "[E1] Ajouter un heading 'Grille tarifaire' au-dessus de la grille de tarifs dans GerantDashboard ParamsView pour cohérence avec la spec.",
+    "[E1 optionnel] Considérer afficher '0 client en attente' au lieu de 'Aucun client en attente' si la spec l'exige strictement (sinon laisser tel quel, plus naturel)."
+  ],
+  "critical_code_review_comments": [
+    "GerantDashboard: AjouterCoiffeurBtn ne distingue pas l'erreur PGRST204 (schéma manquant) d'une erreur de validation — la toast affichée est brute en anglais. Suggestion: catch spécifique → message FR 'Veuillez appliquer supabase_update.sql.'",
+    "Login.jsx: après un échec login, le toast 'Invalid login credentials' est en anglais (provient de Supabase). Pour cohérence UX FR, intercepter et traduire.",
+    "ClientFlow step 6: les coiffeurs hors-ligne (Sam) sont correctement masqués — bon. Mais la condition de display 'Aucun client en attente' devrait être confirmée avec la spec; les autres compteurs (Yanis '2 clients') fonctionnent.",
+    "App.js : route /coiffeur/pointage/:token est publique et hors AuthProvider redirect — correct pour QR. Bien.",
+    "Multiple console errors 'Failed to load resource: 400' sur le frontend public viennent tous de colonnes Supabase manquantes. Une fois supabase_update.sql appliqué, ces 400 disparaîtront."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "≈ 70% des cas exécutables passent ; 30% bloqués par schéma DB / comptes manquants"},
+  "test_credentials": "gerant@demo.fr / demo123 EXISTE et fonctionne. leo@dashboard-barber.fr et karim@demo.fr N'EXISTENT PAS encore — utilisateur doit les créer via signup.",
+  "seed_data_creation": "Aucune création directe (insert coiffeur a échoué à cause de qr_token manquant). Le salon demo et 3 coiffeurs (Karim, Yanis, Sam) sont déjà seedés par supabase_schema.sql.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Re-tester APRÈS que l'utilisateur ait : (1) exécuté /app/supabase_update.sql dans Supabase, (2) créé les comptes leo@dashboard-barber.fr (LeoDemo2026!) et karim@demo.fr (demo123) via signup, (3) confirmé que le coiffeur Karim a bien un qr_token (visible via Supabase Studio ou en console). Tests prioritaires à exécuter ensuite : (a) /coiffeur/pointage/{token-réel} → bouton 'J'arrive — Je pointe' ; (b) Gérant > +Ajouter coiffeur → invite-link affiché contenant ?role=coiffeur&prenom=...&token=... ; (c) Gérant > Paramètres → save-params persistant ; (d) Coiffeur dashboard → termine-btn → modal pourboire (tip-custom-input '0.5' bouton OK désactivé, '5' activé, tip-pass visible) ; (e) SuperAdmin → liste salons + dropdown plan-{id} + placeholder logo gris. Les selectors testids attendus sont déjà tous en place dans le code (vérifié sur Paramètres et Chaises).",
+  "rca of the issue": "Toutes les régressions observées proviennent d'un seul facteur : /app/supabase_update.sql n'a pas été exécuté sur Supabase. Les colonnes qr_token, adresse, ville, code_postal, telephone_fixe, telephone_mobile, tarifs (salons), pourboire (file_attente) ne sont pas présentes → PostgREST renvoie PGRST204/42703. Frontend code attend ces colonnes (vérifié par lecture de GerantDashboard ParamsView + AjouterCoiffeurBtn). Reproduction : curl 'https://ustalpdtmlovuioghnyl.supabase.co/rest/v1/coiffeurs?select=qr_token' → 'column coiffeurs.qr_token does not exist'. Mitigation : exécuter /app/supabase_update.sql dans Supabase SQL Editor."
+}
