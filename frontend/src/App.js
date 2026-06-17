@@ -16,14 +16,15 @@ const ROLE_COIFFEUR = ["coiffeur"];
 const ROLE_GERANT = ["gerant"];
 const ROLE_SUPER_ADMIN = ["super_admin"];
 
+const ROLE_DEST = { gerant: "/gerant", coiffeur: "/coiffeur", super_admin: "/super-admin" };
+
 const Protected = ({ children, roles }) => {
   const { session, profile, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-sm label-uppercase">Chargement…</div>;
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <Navigate to="/onboarding" replace />;
   if (roles && !roles.includes(profile.role)) {
-    const dest = profile.role === "gerant" ? "/gerant" : profile.role === "coiffeur" ? "/coiffeur" : profile.role === "super_admin" ? "/super-admin" : "/";
-    return <Navigate to={dest} replace />;
+    return <Navigate to={ROLE_DEST[profile.role] || "/"} replace />;
   }
   return children;
 };
