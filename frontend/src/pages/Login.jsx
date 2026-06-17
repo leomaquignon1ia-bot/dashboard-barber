@@ -62,7 +62,12 @@ export default function Login() {
         navigate(dest);
       }
     } catch (err) {
-      toast.error(err.message || "Erreur");
+      const msg = err.message || "Erreur";
+      const fr = msg
+        .replace(/Invalid login credentials/i, "Email ou mot de passe incorrect")
+        .replace(/User already registered/i, "Un compte existe déjà avec cet email")
+        .replace(/Email not confirmed/i, "Email non confirmé — vérifiez vos emails");
+      toast.error(fr);
     } finally {
       setLoading(false);
     }

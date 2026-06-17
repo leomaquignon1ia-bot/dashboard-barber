@@ -389,7 +389,12 @@ const AjouterCoiffeurBtn = ({ salonId, onAdded }) => {
       salon_id: salonId, prenom: prenom.trim(), actif: true, disponible: false, qr_token
     }).select().single();
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (error.code === "PGRST204" || /qr_token|column/i.test(error.message)) {
+        return toast.error("Schéma Supabase incomplet. Exécutez /app/supabase_update.sql dans le SQL Editor.");
+      }
+      return toast.error(error.message);
+    }
     const link = `${window.location.origin}/login?role=coiffeur&prenom=${encodeURIComponent(prenom.trim())}&token=${data.qr_token}`;
     setInviteLink(link);
     toast.success(`${prenom} ajouté. Partagez-lui le lien d'invitation.`);
