@@ -33,13 +33,25 @@ export const AuthProvider = ({ children }) => {
   const actions = useMemo(() => ({
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signUp: async (email, password, role, salonId, prenom) => {
+      let userId;
       const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) return { error };
-      const userId = data.user?.id;
+      if (error) {
+        // Si le compte existe déjà, on tente une connexion automatique
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+          const { data: signed, error: errSignin } = await supabase.auth.signInWithPassword({ email, password });
+          if (errSignin) return { error: errSignin };
+          userId = signed.user?.id;
+        } else {
+          return { error };
+        }
+      } else {
+        userId = data.user?.id;
+      }
       if (userId) {
         await supabase.from('user_roles').upsert({ user_id: userId, role, salon_id: salonId, prenom });
       }
-      return { data };
+      return { data: { user: { id: userId } } };
     },
     signOut: () => supabase.auth.signOut(),
   }), []);

@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 5 — Frontend only retest of fixes from iter_4. ALL 8 priority flows PASS: (1) SuperAdmin via signIn works → /super-admin shows salon row with '12 rue Test, Paris', '0102030405 · 0612345678', plan dropdown change persists in DB; (2) Pourboires end-to-end: client created via /client → Karim termine-btn → tip 0.5 disables OK with min message → tip 5 enables → toast 'Pourboire +5€ enregistré' + DB row montant=5.00 confirmed via PostgREST; tip-pass on another client → toast 'Pourboire passé', NO new DB row; (3) ClientFlow récap correctly shows 22 € for adulte/classique; (4) Step 6 counter shows 'X clients en attente' (Yanis '2 clients en attente') and 'Aucun client en attente' for empty; (5) Gerant regression: TestBarber + Karim + Yanis + Sam visible in Chaises, salon params persisted (verified via PostgREST: adresse=12 rue Test, ville=Paris, tarifs.adulte.classique=22); (6) Unauth route guard preserves ?role= for all 4 roles (label header shows correct 'Super Admin', 'Franchisé', 'Gérant', 'Coiffeur'); (7) QR modal — NO 'Missing Description' a11y warnings in console; (8) Smoke OK.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "SuperAdmin first-time signup mode", "issue": "When using mode 'Créer un compte' for super_admin with credentials of an account that already exists in Supabase auth, AuthContext.signUp does fall back to signInWithPassword (good) and the user_roles upsert succeeds (verified in DB), BUT after navigate(dest='/super-admin') the user lands on /onboarding because the AuthContext.loadProfile() ran during onAuthStateChange BEFORE the user_roles upsert completed. No retrigger of loadProfile after upsert → Onboarding gets stuck for 5s then shows fallback button. Workaround: just use 'Se connecter' instead of 'Créer un compte' once row exists. Fix suggestion: After signUp's upsert completes, call refreshProfile() explicitly, or have Onboarding poll/subscribe to user_roles changes.", "affected_selectors": ["[data-testid='login-submit']"], "priority": "MEDIUM"}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_4.json"],
+  "passed_flows": [
+    "[1 SuperAdmin] leo@dashboard-barber.fr/LeoDemo2026! via 'Se connecter' → /super-admin loads with KPIs (Salons=1, Coiffeurs Actifs=1, CA=0€, Pourboires=0€) + salon-row-11111111... containing '12 rue Test, Paris' and '0102030405 · 0612345678'. plan-{id} dropdown studio→starter persisted to DB (verified PATCH return).",
+    "[2 Pourboires E2E] Client 'Test' created via /client/{salon} → Karim login → termine-btn → modal: tip-custom-input='0.5' → tip-custom-ok DISABLED + min message 'minimum' visible → tip-custom-input='5' → ENABLED → click → toast 'Pourboire +5€ enregistré' → DB row inserted (montant=5.00, statut=en_attente). New 'Pass' client → termine → tip-pass → toast 'Pourboire passé', NO new DB row.",
+    "[3 ClientFlow récap] /client/{salon} → adulte+classique+lisses+cb → step 8 récap shows '22 €' (matches DB tarifs.adulte.classique=22).",
+    "[4 Counter] Step 6 'Choisir un coiffeur' shows 'Yanis · 2 clients en attente' and 'Karim · Aucun client en attente' before assignment; counter correctly reflects file_attente rows.",
+    "[5 Gérant régression] gerant@demo.fr login → /gerant → KPIs (Clients=2, CA=44€, Pourboires=5€, Top=Karim) + Chaises tab shows 4 chairs: Yanis ACTIF 2 en attente, Sam INACTIF, TestBarber INACTIF, Karim ACTIF Pointé 22:11. PostgREST confirms salon adresse='12 rue Test', ville='Paris', tarifs.adulte.classique=22.",
+    "[6 Routing] /super-admin, /franchise, /gerant, /coiffeur unauthenticated all redirect to /login?role={role}. Headers show correct labels 'Super Admin', 'Franchisé', 'Gérant', 'Coiffeur'.",
+    "[7 Dialogs a11y] QR modal opened (qr-pointage-btn) → NO 'Missing Description or aria-describedby' warning in console. Tip modal a11y also clean (no warnings during termine-btn flow).",
+    "[8 Smoke] Landing, /login?role={each}, /client/{salon} all load without JS console errors."
+  ],
+  "action_items": [
+    "[E1 — MEDIUM] AuthContext signUp fallback: after successful signInWithPassword + user_roles upsert, call loadProfile/refreshProfile so the Protected route doesn't kick the user to /onboarding (where they then get stuck since profile is loaded once and never retriggered). Currently the signup mode for an already-existing account lands on /onboarding for 5s then needs manual retry — workaround is to use signIn mode directly. Code location: /app/frontend/src/contexts/AuthContext.jsx lines 35-55, after `await supabase.from('user_roles').upsert(...)` add `await loadProfile(userId)`.",
+    "[E1 — LOW] Onboarding.jsx — add a useEffect that retriggers refreshProfile on focus/interval to recover from race conditions (also useful for email-confirm flow)."
+  ],
+  "critical_code_review_comments": [
+    "AuthContext.signUp: the user_roles upsert runs AFTER signIn fires onAuthStateChange → loadProfile reads null. The function correctly handles 'already registered' but doesn't refresh the profile post-upsert. Add `await loadProfile(userId)` after the upsert OR rely on a Postgres trigger.",
+    "Login.jsx submit() now properly surfaces toast.error for supabase errors (verified — French translations of Invalid login credentials / User already registered etc.). GOOD.",
+    "App.js Protected component preserves ?role= via ROLE_LOGIN map — works as intended (verified for all 4 roles).",
+    "CoiffeurDashboard.jsx QR dialog + Tip dialog — DialogDescription added, no a11y warnings. GOOD.",
+    "ClientFlow.jsx — prix computed from salon.tarifs[tier][coupe] correctly displays persisted tarif (22 €). GOOD.",
+    "Positive: pourboires write path is clean — 5€ insert successful, pass path does NOT insert, statut=en_attente set as expected. Counters in step 6 read live from file_attente."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only)", "frontend": "100% on the 8 priority flows; 1 medium-priority race condition remains around signup→onboarding fallback" },
+  "test_credentials": "gerant@demo.fr/demo123 ✓, karim@demo.fr/demo123 ✓, leo@dashboard-barber.fr/LeoDemo2026! ✓ (user_roles row created with role=super_admin, user_id=fc2fcdd4-0e43-49cf-aad5-c74ec7917d95). Use 'Se connecter' mode, not 'Créer un compte', to avoid the onboarding race.",
+  "seed_data_creation": "Karim coiffeur reset to disponible=true, fin_journee_at=null (was set from iter_4 pointage cycle). Two test clients created via ClientFlow for Karim ('Test' adulte classique, 'Pass' adulte classique) — both now in TERMINÉ state. One pourboire row montant=5.00 inserted for Karim. Salon plan toggled studio→starter→pro (final value: pro).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All iter_5 priority flows GREEN. The only remaining minor issue is the AuthContext.signUp → onboarding race (E1 fix needed but not blocking). Karim's pointage was reset and a pourboire row was added. Salon plan reset to 'pro'. Yanis still has 2 lingering attente file_attente rows from previous test — clean if needed for future test counter assertions.",
+  "rca of the issue": "iter_4 SuperAdmin 400 silent failure RCA confirmed: leo@dashboard-barber.fr existed in supabase auth but had NO user_roles row. iter_5 fix in AuthContext.signUp now catches 'already registered' and falls back to signInWithPassword → upserts user_roles. This works (DB confirms super_admin row created). However a secondary issue surfaced: after signUp-with-fallback, the navigate happens before profile is reloaded, so Protected sees no profile and redirects to /onboarding (race condition). Simple fix: call loadProfile(userId) after the upsert in AuthContext.signUp."
+}

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { LogOut, CheckCircle2, XCircle, TrendingUp, Coins, Pause, Play, QrCode, CalendarClock } from "lucide-react";
 
@@ -244,7 +244,10 @@ export default function CoiffeurDashboard() {
       {/* Tip modal */}
       <Dialog open={!!tipModal} onOpenChange={(o)=>!o&&setTipModal(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Pourboire</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Pourboire</DialogTitle>
+            <DialogDescription>Choisissez un montant rapide ou saisissez un montant libre.</DialogDescription>
+          </DialogHeader>
           <div className="text-sm text-neutral-500 mb-3">Montrer cet écran au client</div>
           <div className="grid grid-cols-3 gap-3 mb-3">
             {[2,5,10].map(m => (
@@ -274,8 +277,10 @@ export default function CoiffeurDashboard() {
       {/* QR Pointage modal */}
       <Dialog open={qrModal} onOpenChange={setQrModal}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Mon QR de pointage</DialogTitle></DialogHeader>
-          <div className="text-sm text-neutral-500 mb-3">Scannez ce QR avec votre téléphone pour pointer l&apos;arrivée, prendre une pause ou terminer la journée.</div>
+          <DialogHeader>
+            <DialogTitle>Mon QR de pointage</DialogTitle>
+            <DialogDescription>Scannez ce QR avec votre téléphone pour pointer l&apos;arrivée, prendre une pause ou terminer la journée.</DialogDescription>
+          </DialogHeader>
           {me.qr_token ? (
             <div className="flex flex-col items-center gap-3 py-2">
               <img

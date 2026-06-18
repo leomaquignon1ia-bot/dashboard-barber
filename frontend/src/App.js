@@ -20,11 +20,15 @@ const ROLE_SUPER_ADMIN = ["super_admin"];
 const ROLE_FRANCHISE = ["franchise"];
 
 const ROLE_DEST = { gerant: "/gerant", coiffeur: "/coiffeur", super_admin: "/super-admin", franchise: "/franchise" };
+const ROLE_LOGIN = { gerant: "/login?role=gerant", coiffeur: "/login?role=coiffeur", super_admin: "/login?role=super_admin", franchise: "/login?role=franchise" };
 
 const Protected = ({ children, roles }) => {
   const { session, profile, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-sm label-uppercase">Chargement…</div>;
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) {
+    const target = (roles && roles[0] && ROLE_LOGIN[roles[0]]) || "/login";
+    return <Navigate to={target} replace />;
+  }
   if (!profile) return <Navigate to="/onboarding" replace />;
   if (roles && !roles.includes(profile.role)) {
     return <Navigate to={ROLE_DEST[profile.role] || "/"} replace />;
