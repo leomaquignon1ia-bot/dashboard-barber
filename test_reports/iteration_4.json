@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 4 — supabase_update.sql confirmed APPLIED (verified via curl PostgREST: coiffeurs.qr_token, salons.ville/adresse/code_postal/telephone_fixe/telephone_mobile/tarifs, pourboires/franchises/rdv tables all present). Major progress vs iter_3. Tested 7 of 11 flows: Steps 0,1,2,3,4,5 PASS; Step 6 (pourboire DB) partially blocked (no pending client to terminate); Step 7 (SuperAdmin) FAILS — leo@dashboard-barber.fr signup returns 400 then login redirects back to /login (auth/role issue); Steps 8,9,10 deferred. Karim coiffeur account created via signup, QR modal works, pointage state machine arrive→pause→fin works end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST supabase auth signup leo@dashboard-barber.fr", "issue": "Returns 400 on signup. Likely because account was created in a prior iteration but email confirmation pending, OR user_roles row not inserted causing 'super_admin' role guard to reject. Login redirects user back to /login (no toast)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CoiffeurDashboard top-right qr-pointage-btn", "issue": "Sonner 'Connexion réussie' toast overlays the small QR icon button at top-right immediately after login, blocking regular .click() (works with JS .click() bypass). Position the toast to top-center or auto-dismiss faster (currently >5s).", "selector": "[data-testid='qr-pointage-btn']", "priority": "MINOR"},
+      {"component": "Login page after failed super_admin login", "issue": "Redirects to /login without role query param so the page header shows 'GÉRANT' regardless of attempted role. Should preserve ?role=super_admin or show the original target role.", "selector": "h2", "priority": "MINOR"},
+      {"component": "Radix Dialog (CoiffeurDashboard QR & Tip dialogs)", "issue": "Console warning: 'Missing Description or aria-describedby={undefined} for DialogContent' — a11y issue. Add a DialogDescription or aria-describedby attribute.", "selector": "[role='dialog']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Super Admin login → /super-admin", "issue": "After leo@dashboard-barber.fr/LeoDemo2026! signup (toast empty, 400 in console) the subsequent login attempt does not create a session and user is redirected to /login. /super-admin route guard probably rejects because no row in user_roles table for this user. Cannot validate salon-row, plan dropdown, KPIs, address rendering in SuperAdmin view.", "affected_selectors": ["[data-testid='salon-row-11111111-1111-1111-1111-111111111111']", "[data-testid^='plan-']"]},
+      {"flow": "Pourboire DB insert via termine-btn", "issue": "Karim dashboard shows 'Aucun client en attente' so termine-btn cannot be triggered. Test requires first creating a pending client via /client/11111111-1111-1111-1111-111111111111 flow and selecting Karim. Not exercised in this iteration.", "affected_selectors": ["[data-testid='termine-btn']", "[data-testid='tip-custom-input']", "[data-testid='tip-custom-ok']", "[data-testid='tip-pass']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_3.json"],
+  "passed_flows": [
+    "[0] Schema check — coiffeurs.qr_token=a6fadb48… for Karim; salons has ville/adresse/code_postal/telephones/tarifs columns; pourboires/franchises/rdv tables exist (curl PostgREST 200 OK)",
+    "[1] Gerant > Chaises > +Ajouter coiffeur TestBarber → toast 'TestBarber ajouté. Partagez-lui le lien d'invitation.' + invite-link rendered + DB row created with qr_token=8caa673c357f7edddf0c9f914af6bcbe (32-hex)",
+    "[2] Gerant > Paramètres : saved 12 rue Test / Paris / 75001 / 0102030405 / 0612345678 / tarif-adulte-classique=22 → toast 'Paramètres enregistrés' → F5 reload persists all values → DB curl confirms salons row updated and tarifs.adulte.classique=22",
+    "[3] /coiffeur/pointage/a6fadb48c89e4fcb9e43b5f09e30d7a4 (Karim, after PATCH disponible=false) → arrive-btn 'J'arrive — Je pointe' visible → click → pointage-state-on with 'Disponible' → pause-btn → 'En pause' → unpause → 'Disponible' → fin-btn → toast then redirect to /",
+    "[4] /coiffeur/pointage/abc123-invalid → 'Lien invalide' displayed",
+    "[5a] Karim signup via /login?role=coiffeur&prenom=Karim with karim@demo.fr/demo123 → account created (toast 'Compte créé')",
+    "[5b] Karim login (toggle to Se connecter) → /coiffeur dashboard renders with statut, file, stats. qr-pointage-btn clickable (via JS bypass), QR modal shows qr-image (api.qrserver.com) and qr-link containing /coiffeur/pointage/a6fadb48c89e4fcb9e43b5f09e30d7a4"
+  ],
+  "action_items": [
+    "[E1 — HIGH] Fix super_admin signup/login flow. Hypothesis: leo@dashboard-barber.fr account already exists in supabase auth (from a prior iter) hence 400 'User already registered'; subsequent login then needs valid password AND a row in user_roles (role='super_admin'). Verify: (a) Login.jsx properly inserts into user_roles on first session, (b) /super-admin route guard reads from user_roles, (c) on 400 signup, automatically fall-back to signIn with same credentials and show clear error toast. Also preserve ?role=super_admin on redirect-to-login.",
+    "[E1 — MEDIUM] Toast overlay blocks top-right qr-pointage-btn after login. Move sonner Toaster position to top-center or reduce duration to ~2s. Currently regular Playwright .click() fails (requires JS .click()).",
+    "[E1 — LOW] Add DialogDescription / aria-describedby to QR and Tip Dialogs to silence Radix a11y warning.",
+    "[Testing — next iter] Step 6 (pourboire DB end-to-end) requires first walking through /client/{salon_id} flow to create a pending client assigned to Karim, then exercising termine-btn → tip modal (0.5 ENABLED/disabled boundary check, 5€ enregistré, tip-pass). Then curl GET /rest/v1/pourboires?coiffeur_id=eq.22222222-2222-2222-2222-222222222221 to confirm row persisted.",
+    "[Testing — next iter] Step 8 (ClientFlow récap=22€) — end-to-end walk through 8 client steps; DB already confirms tarif.adulte.classique=22, so this is just rendering verification.",
+    "[Testing — next iter] Step 9 (counter '1 client en attente') and Step 10 (franchise dashboard) — deferred."
+  ],
+  "critical_code_review_comments": [
+    "Login.jsx: When supabase signUp returns 400 (e.g. user exists), Login surfaces no toast — silent failure. Add catch and toast.error with the supabase error.message.",
+    "Login.jsx: After failed login, URL drops the ?role=xxx query param making the page header revert to default GÉRANT. Preserve search params on navigate('/login').",
+    "CoiffeurDashboard.jsx: QR Dialog and Tip Dialog both missing DialogDescription — Radix accessibility violation (console warning).",
+    "App shell: Sonner toast position appears to be top-right, overlapping the qr-pointage-btn icon. Reposition or shrink duration.",
+    "Positive: GerantDashboard params persistence, add-coiffeur with qr_token generation, and CoiffeurPointage state machine all work cleanly and persist correctly to Supabase. No PGRST204/42703 errors observed in console."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (all PostgREST schema/CRUD calls succeed)", "frontend": "~70% (6 of ~10 flows passing; SuperAdmin blocked; pourboire+ClientFlow récap+counter+franchise deferred)"},
+  "test_credentials": "gerant@demo.fr/demo123 ✓; karim@demo.fr/demo123 ✓ (created+verified login); leo@dashboard-barber.fr/LeoDemo2026! ✗ (signup 400, login fails); franchise@demo.fr not created.",
+  "seed_data_creation": "Created TestBarber coiffeur (id=9d3893bd-e3f4-4386-8ed7-5a600a56cbff, qr_token=8caa673c357f7edddf0c9f914af6bcbe). Updated salon 1111…1111 with adresse=12 rue Test, ville=Paris, cp=75001, tels, tarif adulte classique=22. Karim PATCH back to disponible=false then full pointage cycle ended at fin_journee_at=now. Karim auth user created (karim@demo.fr).",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Schema is fully applied. Gerant/Coiffeur/Pointage flows are GREEN. Focus next iter on: (1) Fix super_admin auth → re-test SuperAdmin salon-row content (address '12 rue Test, Paris', phones '0102030405 · 0612345678', plan dropdown change pro↔starter). (2) Create a client via /client/11111111-1111-1111-1111-111111111111 → exercise termine-btn → tip 0.5 vs 5 vs pass → curl GET /rest/v1/pourboires to verify DB write. (3) ClientFlow step 8 récap should show 22 € after tarif change. (4) Login routing: preserve ?role= on failure and surface toast.error on supabase 400. Karim is already signed up (karim@demo.fr/demo123); to log in use 'Déjà inscrit ? Se connecter' toggle then 'Se connecter' button — works.",
+  "rca of the issue": "SuperAdmin failure RCA: leo@dashboard-barber.fr signup returns 400 (visible in Network tab as 400 from supabase auth/v1/signup). Most likely cause: the account exists from a previous iteration without password reset, OR email confirmation is mandated and the temp account is in 'unconfirmed' state. Subsequent login then either fails silently (wrong password / unconfirmed account) and Login.jsx swallows the error (no toast). Even if login succeeded, the route /super-admin appears to require a row in user_roles table — if signup didn't insert that row (e.g. due to RLS), the guard kicks user back to /login. Mitigation: (a) In Login.jsx surface supabase error.message via toast.error; (b) on 400 from signUp, automatically retry with signInWithPassword and prompt 'Compte existant — connexion automatique'; (c) ensure user_roles insert is atomic with signUp and uses an upsert with RLS bypass via supabase RPC."
+}
