@@ -50,11 +50,13 @@ export const AuthProvider = ({ children }) => {
       }
       if (userId) {
         await supabase.from('user_roles').upsert({ user_id: userId, role, salon_id: salonId, prenom });
+        // Recharge le profil pour que les routes protégées voient le rôle immédiatement
+        await loadProfile(userId);
       }
       return { data: { user: { id: userId } } };
     },
     signOut: () => supabase.auth.signOut(),
-  }), []);
+  }), [loadProfile]);
 
   const refreshProfile = useCallback(() => loadProfile(session?.user?.id), [loadProfile, session]);
 
