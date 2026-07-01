@@ -1,8 +1,35 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Scissors, User, Crown, Building2, Sparkles, AlertTriangle } from "lucide-react";
+import { Scissors, Crown, Sparkles, AlertTriangle } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { DEMO_SALON_ID, supabase } from "@/lib/supabase";
+
+const ClientIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="8" r="4"/>
+    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+  </svg>
+);
+
+const BarberPoleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="2" width="6" height="20" rx="3"/>
+    <path d="M9 6c2 1 4 1 6 0"/>
+    <path d="M9 10c2 1 4 1 6 0"/>
+    <path d="M9 14c2 1 4 1 6 0"/>
+    <path d="M9 18c2 1 4 1 6 0"/>
+  </svg>
+);
+
+const StoresIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3h18l1 5H2L3 3z"/>
+    <path d="M2 8v13h20V8"/>
+    <path d="M8 8v2a4 4 0 0 1-6 0V8"/>
+    <path d="M14 8v2a4 4 0 0 0 8 0V8"/>
+    <rect x="9" y="14" width="6" height="7" rx="0.5"/>
+  </svg>
+);
 
 const RoleCard = ({ to, label, sublabel, Icon, testid }) => (
   <Link
@@ -35,7 +62,6 @@ export default function Landing() {
     };
     check();
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -74,13 +100,13 @@ export default function Landing() {
             to={`/client/${salon?.id || DEMO_SALON_ID}`}
             label="Client"
             sublabel="S'inscrire dans la file d'attente"
-            Icon={User}
+            Icon={ClientIcon}
             testid="role-client"
           />
           <RoleCard to="/login?role=coiffeur" label="Coiffeur" sublabel="Mon interface coiffeur" Icon={Scissors} testid="role-coiffeur" />
-          <RoleCard to="/login?role=gerant" label="Gérant" sublabel="Dashboard de mon salon" Icon={Crown} testid="role-gerant" />
-          <RoleCard to="/login?role=franchise" label="Franchisé" sublabel="Vue multi-salons" Icon={Building2} testid="role-franchise" />
-          <RoleCard to="/login?role=super_admin" label="Super Admin" sublabel="Vue plateforme (Léo)" Icon={Building2} testid="role-super-admin" />
+          <RoleCard to="/login?role=gerant" label="Gérant" sublabel="Dashboard de mon salon" Icon={BarberPoleIcon} testid="role-gerant" />
+          <RoleCard to="/login?role=franchise" label="Franchisé" sublabel="Vue multi-salons" Icon={StoresIcon} testid="role-franchise" />
+          <RoleCard to="/login?role=super_admin" label="Super Admin" sublabel="Vue plateforme (Léo)" Icon={Crown} testid="role-super-admin" />
         </div>
 
         <footer className="mt-16 pt-6 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-500">
