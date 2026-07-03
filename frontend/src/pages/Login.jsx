@@ -87,7 +87,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#111111] text-[#1A1A1A] dark:text-[#F5F5F5]">
       <div className="max-w-md mx-auto px-6 py-10">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-current mb-8" data-testid="back-home">
+        <Link to="/admin" className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-current mb-8" data-testid="back-home">
           <ArrowLeft size={14}/> Retour
         </Link>
 
