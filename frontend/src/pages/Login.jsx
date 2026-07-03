@@ -130,6 +130,10 @@ export default function Login() {
           </Button>
         </form>
 
+        <div className="mt-4 text-center">
+          <a href="/reset-password" className="text-sm text-[#6C63FF] hover:underline">Mot de passe oublié ?</a>
+        </div>
+
         <button
           data-testid="toggle-mode"
           className="mt-6 text-sm text-neutral-500 hover:text-current"

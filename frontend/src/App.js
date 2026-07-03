@@ -13,6 +13,7 @@ import GerantDashboard from "@/pages/GerantDashboard";
 import SuperAdmin from "@/pages/SuperAdmin";
 import FranchiseDashboard from "@/pages/FranchiseDashboard";
 import Onboarding from "@/pages/Onboarding";
+import ResetPassword from "@/pages/ResetPassword";
 
 const ROLE_COIFFEUR = ["coiffeur"];
 const ROLE_GERANT = ["gerant"];
@@ -50,6 +51,7 @@ function App() {
               <Route path="/gerant/login" element={<Login />} />
               <Route path="/franchise/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/client" element={<ClientFlow />} />
               <Route path="/client/:salonId" element={<ClientFlow />} />
               <Route path="/attente/:fileId" element={<ClientWaiting />} />
