@@ -10,7 +10,13 @@ import { ArrowLeft } from "lucide-react";
 
 export default function Login() {
   const [params] = useSearchParams();
-  const role = params.get("role") || "gerant";
+  const { pathname } = window.location;
+  const roleFromPath = pathname.startsWith("/coiffeur") ? "coiffeur"
+    : pathname.startsWith("/gerant") ? "gerant"
+    : pathname.startsWith("/franchise") ? "franchise"
+    : pathname.startsWith("/super-admin") ? "super_admin"
+    : null;
+  const role = roleFromPath || params.get("role") || "gerant";
   const invitePrenom = params.get("prenom");
   const inviteToken = params.get("token");
   const navigate = useNavigate();

@@ -43,8 +43,12 @@ function App() {
         <BrowserRouter>
           <div className="App">
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<Navigate to="/gerant/login" replace />} />
+              <Route path="/admin" element={<Landing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/coiffeur/login" element={<Login />} />
+              <Route path="/gerant/login" element={<Login />} />
+              <Route path="/franchise/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/client" element={<ClientFlow />} />
               <Route path="/client/:salonId" element={<ClientFlow />} />
