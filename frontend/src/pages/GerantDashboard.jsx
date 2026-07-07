@@ -137,9 +137,10 @@ export default function GerantDashboard() {
                     </span>
                     {pointageStr && <span className="text-[10px] text-neutral-500">Pointé {pointageStr}</span>}
                     <button onClick={async()=>{
-                      if(!window.confirm("Supprimer "+c.prenom+" ?")) return;
+                      const input = window.prompt("Tapez SUPPRIMER pour confirmer la suppression de "+c.prenom);
+                      if(input !== "SUPPRIMER") return;
                       await supabase.from("coiffeurs").update({actif:false}).eq("id",c.id);
-                    }} className="text-[10px] text-red-400 hover:text-red-600 hover:underline mt-1">Supprimer</button>
+                    }} className="mt-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-semibold rounded">Supprimer</button>
                   </div>
                 );
               })}
