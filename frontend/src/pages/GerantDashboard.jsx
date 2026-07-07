@@ -136,6 +136,10 @@ export default function GerantDashboard() {
                       {c.disponible ? (c.en_pause ? "En pause" : "Actif") : "Inactif"}
                     </span>
                     {pointageStr && <span className="text-[10px] text-neutral-500">Pointé {pointageStr}</span>}
+                    <button onClick={async()=>{
+                      if(!window.confirm("Supprimer "+c.prenom+" ?")) return;
+                      await supabase.from("coiffeurs").update({actif:false}).eq("id",c.id);
+                    }} className="text-[10px] text-red-400 hover:text-red-600 hover:underline mt-1">Supprimer</button>
                   </div>
                 );
               })}
