@@ -140,7 +140,7 @@ export default function GerantDashboard() {
                       const input = window.prompt("Tapez SUPPRIMER pour confirmer la suppression de "+c.prenom);
                       if(input !== "SUPPRIMER") return;
                       await supabase.from("coiffeurs").update({actif:false}).eq("id",c.id);
-                    }} className="mt-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-semibold rounded">Supprimer</button>
+                    }} className="mt-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-semibold rounded mx-auto block">Supprimer</button>
                   </div>
                 );
               })}
