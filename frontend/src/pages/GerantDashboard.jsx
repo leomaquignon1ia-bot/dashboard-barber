@@ -87,7 +87,9 @@ export default function GerantDashboard() {
             {salon?.logo_url ? (
               <img src={salon.logo_url} alt="" className="w-10 h-10 rounded-md object-cover"/>
             ) : (
-              <ScissorsLogo size={40}/>
+              <div className="w-10 h-10 rounded-md bg-gradient-to-br from-[#6C63FF] to-[#4F46E5] flex items-center justify-center text-white font-bold text-sm">
+                {salon?.nom ? salon.nom.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() : "DB"}
+              </div>
             )}
             <div>
               <div className="label-uppercase">Dashboard</div>
@@ -260,6 +262,43 @@ const ParamsView = ({ salon, onSaved }) => {
   const isProPlus = salon.plan === "pro" || salon.plan === "studio";
   return (
     <div className="space-y-6">
+      {/* Logo */}
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
+        <div className="label-uppercase mb-4">Logo du salon</div>
+        <div className="flex items-center gap-4">
+          {form.logo_url ? (
+            <img src={form.logo_url} alt="" className="w-16 h-16 rounded-md object-cover border border-neutral-200 dark:border-neutral-800"/>
+          ) : (
+            <div className="w-16 h-16 rounded-md bg-gradient-to-br from-[#6C63FF] to-[#4F46E5] flex items-center justify-center text-white font-bold text-lg">
+              {salon?.nom ? salon.nom.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() : "DB"}
+            </div>
+          )}
+          <div className="space-y-2">
+            <input type="file" accept="image/*" id="logo-upload" className="hidden" onChange={async(e)=>{
+              const file = e.target.files[0];
+              if (!file) return;
+              const ext = file.name.split(".").pop();
+              const path = `logos/${salon.id}.${ext}`;
+              const { error: upErr } = await supabase.storage.from("salon-assets").upload(path, file, { upsert: true });
+              if (upErr) { toast.error("Erreur upload"); return; }
+              const { data } = supabase.storage.from("salon-assets").getPublicUrl(path);
+              await supabase.from("salons").update({ logo_url: data.publicUrl }).eq("id", salon.id);
+              setForm({...form, logo_url: data.publicUrl});
+              toast.success("Logo mis à jour !");
+            }}/>
+            <label htmlFor="logo-upload" className="cursor-pointer inline-flex items-center gap-2 border border-neutral-200 dark:border-neutral-800 rounded-md px-3 py-2 text-sm hover:border-black dark:hover:border-white transition-colors">
+              Changer le logo
+            </label>
+            {form.logo_url && (
+              <button onClick={async()=>{
+                await supabase.from("salons").update({ logo_url: null }).eq("id", salon.id);
+                setForm({...form, logo_url: null});
+                toast.success("Logo supprimé");
+              }} className="block text-xs text-red-500 hover:underline">Supprimer</button>
+            )}
+          </div>
+        </div>
+      </div>
       {/* Coordonnées */}
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5">
         <div className="label-uppercase mb-4">Coordonnées du salon</div>
