@@ -130,7 +130,7 @@ export default function GerantDashboard() {
                   ? new Date(c.pointage_at).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" })
                   : null;
                 return (
-                  <div key={c.id} className="flex flex-col items-center gap-1" data-testid={`chair-${c.id}`}>
+                  <div key={c.id} className="flex flex-col items-center gap-1 justify-between" style={{minHeight:"130px"}} data-testid={`chair-${c.id}`}>
                     <BarberChair color={chairColor(count, c.disponible)} label={c.prenom} count={count}/>
                     <span className="text-[10px] font-bold uppercase tracking-wider mt-1" style={{ color: c.disponible ? "#10B981"  : "#EF4444" }}>
                       {c.disponible ? (c.en_pause ? "En pause" : "Actif") : "Inactif"}
