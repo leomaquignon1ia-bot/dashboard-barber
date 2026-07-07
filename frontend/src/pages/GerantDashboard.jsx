@@ -285,6 +285,7 @@ const ParamsView = ({ salon, onSaved }) => {
               await supabase.from("salons").update({ logo_url: data.publicUrl }).eq("id", salon.id);
               setForm({...form, logo_url: data.publicUrl});
               toast.success("Logo mis à jour !");
+              onSaved && onSaved();
             }}/>
             <label htmlFor="logo-upload" className="cursor-pointer inline-flex items-center gap-2 border border-neutral-200 dark:border-neutral-800 rounded-md px-3 py-2 text-sm hover:border-black dark:hover:border-white transition-colors">
               Changer le logo
@@ -294,6 +295,7 @@ const ParamsView = ({ salon, onSaved }) => {
                 await supabase.from("salons").update({ logo_url: null }).eq("id", salon.id);
                 setForm({...form, logo_url: null});
                 toast.success("Logo supprimé");
+                onSaved && onSaved();
               }} className="block text-xs text-red-500 hover:underline">Supprimer</button>
             )}
           </div>
