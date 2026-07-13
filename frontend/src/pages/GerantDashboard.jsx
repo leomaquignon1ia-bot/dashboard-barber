@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import Abonnement from "@/pages/Abonnement";
 import { toast } from "sonner";
 import { LogOut, Users, TrendingUp, Coins, Star, Settings, Scissors, Plus, X, Copy, QrCode } from "lucide-react";
 import { BarberChair, ScissorsLogo } from "@/components/Illustrations";
@@ -116,6 +117,7 @@ export default function GerantDashboard() {
             <TabsTrigger data-testid="tab-file" value="file">File d&apos;attente</TabsTrigger>
             <TabsTrigger data-testid="tab-pourboires" value="pourboires">Pourboires</TabsTrigger>
             <TabsTrigger data-testid="tab-params" value="params">Paramètres</TabsTrigger>
+            <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
           </TabsList>
 
           {/* Chaises */}
@@ -182,6 +184,10 @@ export default function GerantDashboard() {
           </TabsContent>
 
           {/* Settings */}
+          <TabsContent value="abonnement">
+            <Abonnement salonId={profile?.salon_id} currentPlan={salon?.plan} />
+          </TabsContent>
+
           <TabsContent value="params">
             <ParamsView salon={salon} onSaved={() => loadSalon(salon.id)}/>
           </TabsContent>
