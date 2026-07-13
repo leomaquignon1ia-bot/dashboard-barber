@@ -52,6 +52,62 @@ app.post('/relances/envoyer', async (req, res) => {
   res.json({ success: true, relances: clients?.length || 0 });
 });
 
+
+// ============ STRIPE ============
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Créer une session de checkout
+app.post('/stripe/create-checkout-session', async (req, res) => {
+  const { price_id, salon_id, plan, duree } = req.body;
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: price_id, quantity: 1 }],
+      success_url: `${process.env.FRONTEND_URL}/gerant?subscription=success`,
+      cancel_url: `${process.env.FRONTEND_URL}/gerant?subscription=cancel`,
+      metadata: { salon_id, plan, duree },
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Webhook Stripe
+app.post('/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const { salon_id, plan, duree } = session.metadata;
+    await supabase.from('salons').update({ plan }).eq('id', salon_id);
+    await supabase.from('abonnements').upsert({
+      salon_id,
+      plan,
+      duree,
+      stripe_customer_id: session.customer,
+      stripe_subscription_id: session.subscription,
+      statut: 'actif',
+      debut: new Date().toISOString(),
+    });
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object;
+    await supabase.from('abonnements').update({ statut: 'annule' }).eq('stripe_subscription_id', sub.id);
+    await supabase.from('salons').update({ plan: 'starter' }).eq('id', sub.metadata?.salon_id);
+  }
+
+  res.json({ received: true });
+});
+
 app.get('/', (req, res) => res.json({ status: 'Dashboard Barber API running' }));
 
 app.listen(process.env.PORT || 3000, () => console.log(`Serveur démarré sur le port ${process.env.PORT || 3000}`));
