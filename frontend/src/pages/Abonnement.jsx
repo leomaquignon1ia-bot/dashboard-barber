@@ -32,7 +32,7 @@ const PLANS = {
   }
 };
 
-const DUREE_COLORS = { "3": "bg-red-100 text-red-600", "6": "bg-yellow-100 text-yellow-600", "12": "bg-green-100 text-green-600" };
+const DUREE_COLORS = { "3": "bg-neutral-900 text-white", "6": "bg-[#6C63FF] text-white", "12": "bg-neutral-900 text-white" };
 const DUREE_LABELS = { "3": "3 mois", "6": "6 mois", "12": "12 mois" };
 
 export default function Abonnement({ salonId, currentPlan }) {
